@@ -1,37 +1,50 @@
 === BuddyDrive ===
-Contributors: mrpritchett, imath
+Contributors: themekraft
 Tags: BuddyPress, files, folders
 Requires at least: 4.5
-Tested up to: 5.3.2
-Stable tag: 2.1.2
+Tested up to: 6.8
+Stable tag: 2.1.3
+Requires PHP: 7.4
 License: GPLv2
 
-Share files the BuddyPress way!
+BuddyDrive lets BuddyPress users upload, manage, and share files and folders from profiles or groups.
 
 == Description ==
 
-As a plugin for BuddyPress, BuddyDrive allows community members to share files or folders with ease. Via the BP attachment API, BuddyPress makes sharing content possible in a variety of ways, including:
+== ** 2025 UPDATE ** ==
 
-* Owner only (private)
-* Password protected content
-* Owner and friends
-* Owner and specified groups
-* Owner and specified members
-* Public sharing (everybody)
+BuddyDrive is now actively maintained once again, with ongoing updates for performance, compatibility, and security.
+
+
+== Let your members upload and share files with ease — right inside your BuddyPress or BuddyBoss community. ==
+
+BuddyDrive is the simplest way to give users their own personal file storage — and the ability to share files or folders with friends or the wider community. Whether it’s documents, PDFs, images, or other uploads, BuddyDrive keeps everything organized and accessible inside each user’s profile or groups.
+This plugin uses the BuddyPress Attachment API for seamless integration, with support for both member profiles and group pages. It’s great for sharing personal files, collaborating in groups, or offering community downloads.
+With the free version of BuddyDrive, users can:
+
+* Upload and manage their own files
+* Share files publicly, with friends, or keep them private
+* Organize uploads into folders
+* Control visibility directly within the user or group interface
+
+BuddyDrive is now under active development with regular updates and ongoing support — rebuilt and maintained by a new team committed to making it fast, secure, and compatible with the latest versions of WordPress, BuddyPress, and BuddyBoss.
 
 BuddyPress is available in English, French, Dutch and Brazilian Portuguese.
 
-== Installation ==
+### Need more advanced sharing options?
+BuddyDrive Pro adds powerful features like:
 
-You can download and install BuddyDrive using the built in WordPress plugin installer. If you download BuddyDrive manually, make sure it is uploaded to "/wp-content/plugins/buddydrive/".
+* Password-protected file access
+* Sharing with specific members or groups
+* More flexible content visibility settings
 
-Activate BuddyDrive in the "Plugins" admin panel using the "Network Activate" if you activated BuddyPress on the network (or "Activate" if you are not running a network, or if BuddyPress is activated on a subsite of the network) link.
+Perfect for communities, educators, private groups, and creators who want to deliver content securely and selectively.
 
 == Frequently Asked Questions ==
 
 = Help! No files show up. What do I do? =
 
-Upgrade to version 2.1.2 and run the database upgrade.
+Upgrade to version 2.1.3 and run the database upgrade.
 
 = How do you upload files in BuddyDrive from the front end? =
 
@@ -44,10 +57,6 @@ Click the edit button in the control panel. Select the file or files you wish to
 = Can you use video and mp3 files?  =
 
 Yes. Multiple file types are allowed in BuddyDrive. You can edit which filetypes are allowed on the BuddyDrive settings page in the WordPress dashboard.
-
-= Where can I find information about bugs, quick fixes, common problems, etc? =
-
-http://wpbuddydrive.com
 
 = Is there a limit to how many people I can share files with? =
 
@@ -70,6 +79,11 @@ We love hearing your needs, want, desires, and ideas for BuddyPress! Our goal is
 5. BuddyDrive items administration.
 
 == Changelog ==
+
+= 2.1.3 =
+* Replaced bp_get_root_domain() to bp_get_root_domain().
+* New frontend UI
+* Added Freemius
 
 = 2.1.2 =
 * Removes Freemius from plugin.

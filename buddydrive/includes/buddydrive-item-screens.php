@@ -1,10 +1,8 @@
 <?php
-/**
- * BuddyDrive Item screens
- */
+/** BuddyDrive Item screens */
 
 // Exit if accessed directly.
-defined( 'ABSPATH' ) || exit;
+defined('ABSPATH') || exit;
 
 /**
  * Main Screen Class.
@@ -13,8 +11,8 @@ defined( 'ABSPATH' ) || exit;
  * @subpackage Screens
  * @since 1.2.0
  */
-class BuddyDrive_Screens {
-
+class BuddyDrive_Screens
+{
 	/**
 	 * The constructor
 	 *
@@ -22,7 +20,8 @@ class BuddyDrive_Screens {
 	 * @subpackage Screens
 	 * @since 1.2.0
 	 */
-	public function __construct() {
+	public function __construct()
+	{
 		$this->setup_globals();
 		$this->setup_filters();
 		$this->setup_actions();
@@ -35,10 +34,11 @@ class BuddyDrive_Screens {
 	 * @subpackage Screens
 	 * @since 1.2.0
 	 */
-	public static function manage_screens() {
+	public static function manage_screens()
+	{
 		$buddydrive = buddydrive();
 
-		if ( empty( $buddydrive->screens ) ) {
+		if (empty($buddydrive->screens)) {
 			$buddydrive->screens = new self;
 		}
 
@@ -52,16 +52,16 @@ class BuddyDrive_Screens {
 	 * @subpackage Screens
 	 * @since 1.2.0
 	 */
-	public function setup_globals() {
-
-		$this->template       = '';
+	public function setup_globals()
+	{
+		$this->template = '';
 		$this->current_screen = '';
 
 		// Is the current theme BP Default or a child theme of BP Default ?
-		$this->is_bp_default = in_array( 'bp-default', array( get_template(), get_stylesheet() ) );
+		$this->is_bp_default = in_array('bp-default', array(get_template(), get_stylesheet()));
 
 		// Path to the component templates
-		$this->template_dir  = buddydrive_get_plugin_dir() . 'templates';
+		$this->template_dir = buddydrive_get_plugin_dir() . 'templates';
 	}
 
 	/**
@@ -71,10 +71,11 @@ class BuddyDrive_Screens {
 	 * @subpackage Screens
 	 * @since 1.2.0
 	 */
-	private function setup_filters() {
-		if ( bp_is_current_component( 'buddydrive' ) || buddydrive_is_group() ) {
-			add_filter( 'bp_located_template',   array( $this, 'template_filter' ), 20, 2 );
-			add_filter( 'bp_get_template_stack', array( $this, 'add_to_template_stack' ), 10, 1 );
+	private function setup_filters()
+	{
+		if (bp_is_current_component('buddydrive') || buddydrive_is_group()) {
+			add_filter('bp_located_template', array($this, 'template_filter'), 20, 2);
+			add_filter('bp_get_template_stack', array($this, 'add_to_template_stack'), 10, 1);
 		}
 	}
 
@@ -85,18 +86,19 @@ class BuddyDrive_Screens {
 	 * @subpackage Screens
 	 * @since 1.2.0
 	 */
-	public function template_filter( $found_template = '', $templates = array() ) {
+	public function template_filter($found_template = '', $templates = array())
+	{
 		$bp = buddypress();
 
 		// Bail if theme has it's own template for content.
-		if ( ! empty( $found_template ) )
+		if (!empty($found_template))
 			return $found_template;
 
 		/**
 		 * Current theme do use theme compat, no need to carry on
 		 * Retuning false will fire bp_setup_theme_compat action
 		 */
-		if ( $bp->theme_compat->use_with_current_theme ) {
+		if ($bp->theme_compat->use_with_current_theme) {
 			return false;
 		}
 
@@ -107,41 +109,40 @@ class BuddyDrive_Screens {
 		 * This theme helped BuddyPress growth, so it desearves
 		 * support ;)
 		 */
-		if ( $this->is_bp_default && bp_is_directory() ) {
-
-			foreach ( $templates as $template ) {
+		if ($this->is_bp_default && bp_is_directory()) {
+			foreach ($templates as $template) {
 				$bp_default_template = $template;
 
-				if ( 'buddydrive.php' == $template ){
-					$bp_default_template = str_replace( '.php', '-default.php', $template );
+				if ('buddydrive.php' == $template) {
+					$bp_default_template = str_replace('.php', '-default.php', $template);
 				}
 
-				if ( file_exists( $this->template_dir . '/' . $bp_default_template ) ){
+				if (file_exists($this->template_dir . '/' . $bp_default_template)) {
 					return $this->template_dir . '/' . $bp_default_template;
 				}
 			}
 		}
+
 		/**
 		 * If we're here this means we're probably on the directory in
 		 * a Theme that is using it's own BuddyPress support.
 		 */
-		if ( bp_is_directory() && ! $this->is_bp_default ) {
-
+		if (bp_is_directory() && !$this->is_bp_default) {
 			// This happens to work in some BuddyPress standalone theme !!
-			bp_theme_compat_reset_post( array(
-				'ID'             => $bp->pages->buddydrive->id,
-				'post_title'     => $bp->pages->buddydrive->title,
-				'post_author'    => 0,
-				'post_date'      => 0,
-				'post_content'   => '',
-				'is_page'        => true,
+			bp_theme_compat_reset_post(array(
+				'ID' => $bp->pages->buddydrive->id,
+				'post_title' => $bp->pages->buddydrive->title,
+				'post_author' => 0,
+				'post_date' => 0,
+				'post_content' => '',
+				'is_page' => true,
 				'comment_status' => 'closed'
-			) );
+			));
 
-			add_filter( 'the_content', array( $this, 'directory_content' ) );
+			add_filter('the_content', array($this, 'directory_content'));
 		}
 
-		return apply_filters( 'buddydrive_load_template_filter', $found_template );
+		return apply_filters('buddydrive_load_template_filter', $found_template);
 	}
 
 	/**
@@ -151,8 +152,9 @@ class BuddyDrive_Screens {
 	 * @subpackage Screens
 	 * @since 1.2.0
 	 */
-	public function add_to_template_stack( $templates = array() ) {
-		$templates = array_merge( $templates, array( trailingslashit( $this->template_dir ) ) );
+	public function add_to_template_stack($templates = array())
+	{
+		$templates = array_merge($templates, array(trailingslashit($this->template_dir)));
 
 		return $templates;
 	}
@@ -164,13 +166,13 @@ class BuddyDrive_Screens {
 	 * @subpackage Screens
 	 * @since 1.2.0
 	 */
-	public static function user_files() {
-
-		do_action( 'buddydrive_user_files' );
+	public static function user_files()
+	{
+		do_action('buddydrive_user_files');
 
 		// No template file provided as we'll use default members/single/plugins.php
 		// for the BuddyDrive explorer
-		self::load_template( '', 'user_files' );
+		self::load_template('', 'user_files');
 	}
 
 	/**
@@ -180,12 +182,27 @@ class BuddyDrive_Screens {
 	 * @subpackage Screens
 	 * @since 1.2.0
 	 */
-	public static function friends_files() {
-
-		do_action( 'buddydrive_friends_files' );
+	public static function friends_files()
+	{
+		do_action('buddydrive_friends_files');
 
 		// We'll only use members/single/plugins
-		self::load_template( '', 'friends_files' );
+		self::load_template('', 'friends_files');
+	}
+
+	/**
+	 * Group shared files screen
+	 *
+	 * @package BuddyDrive Component
+	 * @subpackage Screens
+	 * @since 2.0.0
+	 */
+	public static function group_files()
+	{
+		do_action('buddydrive_group_files');
+
+		// Use the default template for JS to take over
+		self::load_template('', 'group_files');
 	}
 
 	/**
@@ -197,34 +214,33 @@ class BuddyDrive_Screens {
 	 * @subpackage Screens
 	 * @since 1.2.0
 	 */
-	public static function load_template( $template = '', $screen = '' ) {
-
+	public static function load_template($template = '', $screen = '')
+	{
 		$buddydrive = buddydrive();
-		/****
+
+		/*
 		 * Displaying Content
 		 */
-		$buddydrive->screens->template       = $template;
+		$buddydrive->screens->template = $template;
 		$buddydrive->screens->current_screen = $screen;
 
-		if ( buddypress()->theme_compat->use_with_current_theme && ! empty( $template ) ) {
-			add_filter( 'bp_get_template_part', array( __CLASS__, 'template_part' ), 10, 3 );
+		if (buddypress()->theme_compat->use_with_current_theme && !empty($template)) {
+			add_filter('bp_get_template_part', array(__CLASS__, 'template_part'), 10, 3);
 		} else {
 			// You can only use this method for users profile pages
-			if ( ! bp_is_directory() ) {
-
+			if (!bp_is_directory()) {
 				$buddydrive->screens->template = 'members/single/plugins';
 
-				if ( buddydrive_use_deprecated_ui() ) {
-					add_action( 'bp_template_title',   "buddydrive_{$screen}_title"   );
-					add_action( 'bp_template_content', "buddydrive_{$screen}_content" );
+				if (buddydrive_use_deprecated_ui()) {
+					add_action('bp_template_title', "buddydrive_{$screen}_title");
+					add_action('bp_template_content', "buddydrive_{$screen}_content");
 				} else {
 					// Use a unique Callback function, everything will be managed in Javascript
-					add_action( 'bp_template_content', 'buddydrive_user_content' );
+					add_action('bp_template_content', 'buddydrive_user_content');
 				}
 			}
 		}
-
-		bp_core_load_template( apply_filters( "buddydrive_template_{$screen}", $buddydrive->screens->template ) );
+		bp_core_load_template(apply_filters("buddydrive_template_{$screen}", $buddydrive->screens->template));
 	}
 
 	/**
@@ -234,14 +250,15 @@ class BuddyDrive_Screens {
 	 * @subpackage Screens
 	 * @since 1.2.0
 	 */
-	public static function template_part( $templates, $slug, $name ) {
-		if ( $slug != 'members/single/plugins' ) {
-	        return $templates;
+	public static function template_part($templates, $slug, $name)
+	{
+		if ($slug != 'members/single/plugins') {
+			return $templates;
 		}
 
-		$templates = array( buddydrive()->screens->template . '.php' );
+		$templates = array(buddydrive()->screens->template . '.php');
 
-	    return $templates;
+		return $templates;
 	}
 
 	/**
@@ -251,9 +268,10 @@ class BuddyDrive_Screens {
 	 * @subpackage Screens
 	 * @since 1.2.0
 	 */
-	private function setup_actions() {
-		add_action( 'bp_screens',            array( $this, 'directory_setup' ) );
-		add_action( 'bp_setup_theme_compat', array( $this, 'use_theme_compat' ) );
+	private function setup_actions()
+	{
+		add_action('bp_screens', array($this, 'directory_setup'));
+		add_action('bp_setup_theme_compat', array($this, 'use_theme_compat'));
 	}
 
 	/**
@@ -263,16 +281,17 @@ class BuddyDrive_Screens {
 	 * @subpackage Screens
 	 * @since 1.2.0
 	 */
-	public function directory_setup() {
-		if ( bp_is_current_component( 'buddydrive' ) && ! bp_displayed_user_id() ) {
+	public function directory_setup()
+	{
+		if (bp_is_current_component('buddydrive') && !bp_displayed_user_id()) {
 			// This wrapper function sets the $bp->is_directory flag to true, which help other
 			// content to display content properly on your directory.
-			bp_update_is_directory( true, 'buddydrive' );
+			bp_update_is_directory(true, 'buddydrive');
 
 			// Add an action so that plugins can add content or modify behavior
-			do_action( 'buddydrive_screen_index' );
+			do_action('buddydrive_screen_index');
 
-			self::load_template( 'buddydrive', 'directory' );
+			self::load_template('buddydrive', 'directory');
 		}
 	}
 
@@ -283,14 +302,15 @@ class BuddyDrive_Screens {
 	 * @subpackage Screens
 	 * @since 1.2.0
 	 */
-	public function use_theme_compat() {
-		if ( ! bp_displayed_user_id() && bp_is_current_component( 'buddydrive' ) ) {
-			add_action( 'bp_template_include_reset_dummy_post_data', array( $this, 'directory_dummy_post' ) );
-			add_filter( 'bp_replace_the_content',                    array( $this, 'directory_content'    ) );
+	public function use_theme_compat()
+	{
+		if (!bp_displayed_user_id() && bp_is_current_component('buddydrive')) {
+			add_action('bp_template_include_reset_dummy_post_data', array($this, 'directory_dummy_post'));
+			add_filter('bp_replace_the_content', array($this, 'directory_content'));
 		}
 	}
 
-	/** Directory *************************************************************/
+	/** Directory */
 
 	/**
 	 * Update the global $post with directory data
@@ -301,19 +321,19 @@ class BuddyDrive_Screens {
 	 *
 	 * @uses bp_theme_compat_reset_post() to reset the post data
 	 */
-	public function directory_dummy_post() {
-
-		bp_theme_compat_reset_post( array(
-			'ID'             => 0,
-			'post_title'     => buddydrive_get_name(),
-			'post_author'    => 0,
-			'post_date'      => 0,
-			'post_content'   => '',
-			'post_type'      => 'page',
-			'post_status'    => 'publish',
-			'is_page'        => true,
+	public function directory_dummy_post()
+	{
+		bp_theme_compat_reset_post(array(
+			'ID' => 0,
+			'post_title' => buddydrive_get_name(),
+			'post_author' => 0,
+			'post_date' => 0,
+			'post_content' => '',
+			'post_type' => 'page',
+			'post_status' => 'publish',
+			'is_page' => true,
 			'comment_status' => 'closed'
-		) );
+		));
 	}
 
 	/**
@@ -325,17 +345,20 @@ class BuddyDrive_Screens {
 	 *
 	 * @uses bp_buffer_template_part()
 	 */
-	public function directory_content() {
-		bp_buffer_template_part( apply_filters( 'buddydrive_directory_template', 'buddydrive' ) );
+	public function directory_content()
+	{
+		bp_buffer_template_part(apply_filters('buddydrive_directory_template', 'buddydrive'));
 	}
 }
-add_action( 'bp_init', array( 'BuddyDrive_Screens', 'manage_screens' ) );
+
+add_action('bp_init', array('BuddyDrive_Screens', 'manage_screens'));
 
 /**
  * Displays the current user's BuddyDrive content
  *
  * @since 2.0.0
  */
-function buddydrive_user_content() {
+function buddydrive_user_content()
+{
 	buddydrive_ui();
 }
