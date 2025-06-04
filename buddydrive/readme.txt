@@ -3,7 +3,7 @@ Contributors: themekraft
 Tags: BuddyPress, files, folders
 Requires at least: 4.5
 Tested up to: 6.8
-Stable tag: 2.1.3
+Stable tag: 2.1.4
 Requires PHP: 7.4
 License: GPLv2
 
@@ -44,7 +44,7 @@ Perfect for communities, educators, private groups, and creators who want to del
 
 = Help! No files show up. What do I do? =
 
-Upgrade to version 2.1.3 and run the database upgrade.
+Upgrade to version 2.1.4 and run the database upgrade.
 
 = How do you upload files in BuddyDrive from the front end? =
 

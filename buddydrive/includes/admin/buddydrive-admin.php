@@ -94,7 +94,7 @@ if (!class_exists('BuddyDrive_Admin')):
 			$this->admin_url = trailingslashit($buddydrive->includes_url . 'admin');  // Admin url
 			$this->styles_url = trailingslashit($this->admin_url . 'css');  // Admin styles URL*/
 			$this->js_url = trailingslashit($this->admin_url . 'js');
-			$this->settings_page = 'options-general.php';
+			$this->settings_page = 'admin.php?page=buddydrive-files';
 			$this->notice_hook = 'admin_notices';
 			$this->user_columns_filter = 'manage_users_columns';
 			$this->requires_db_upgrade = buddydrive_get_db_number_version() < buddydrive_get_number_version();
@@ -185,16 +185,7 @@ if (!class_exists('BuddyDrive_Admin')):
 			if (!bp_current_user_can('manage_options'))
 				return;
 
-			$this->hook_suffixes[] = add_submenu_page(
-				$this->settings_page,
-				_x('BuddyDrive', 'BuddyDrive Settings page title', 'buddydrive'),
-				_x('BuddyDrive', 'BuddyDrive Settings menu title', 'buddydrive'),
-				'manage_options',
-				'buddydrive',
-				'buddydrive_admin_settings'
-			);
-
-			$hook = add_menu_page(
+			$this->hook_suffixes[] = add_menu_page(
 				_x('BuddyDrive', 'BuddyDrive User Files Admin page title', 'buddydrive'),
 				_x('BuddyDrive', 'BuddyDrive User Files Admin menu title', 'buddydrive'),
 				'manage_options',
@@ -203,7 +194,28 @@ if (!class_exists('BuddyDrive_Admin')):
 				'div'
 			);
 
-			$this->hook_suffixes[] = $hook;
+			$this->hook_suffixes[] = add_submenu_page(
+				'buddydrive-files',
+				_x('Settings', 'BuddyDrive Settings page title', 'buddydrive'),
+				_x('Settings', 'BuddyDrive Settings menu title', 'buddydrive'),
+				'manage_options',
+				'buddydrive-settings',
+				'buddydrive_admin_settings'
+			);
+
+			if (function_exists('bud_fs')) {
+				require_once buddydrive_get_plugin_dir() . '.pricing-plan/pricing-page.php';
+				if (bud_fs()->is_not_paying()) {
+					$this->hook_suffixes[] = add_submenu_page(
+						'buddydrive-files',
+						_x('Bundle', 'buddydrive'),
+						_x('Go Pro!', 'buddydrive'),
+						'manage_options',
+						'bundle_screen',
+						'buddyforms_bundle_screen_content'
+					);
+				}
+			}
 
 			// About
 			$this->hook_suffixes[] = add_dashboard_page(
