@@ -42,6 +42,18 @@ function buddydrive_upload_file()
 		bp_attachments_json_response(false, $is_html4);
 	}
 
+	$parent_folder_id = 0;
+	if (!empty($bp_params['parent_folder_id'])) {
+		$parent_folder = buddydrive_get_buddyfile((int) $bp_params['parent_folder_id'], buddydrive_get_folder_post_type());
+
+		// Capability check for the folder
+		if (empty($parent_folder->ID) || !buddydrive_current_user_can('buddydrive_add_to_folder', array('folder' => $parent_folder))) {
+			bp_attachments_json_response(false, $is_html4);
+		}
+
+		$parent_folder_id = (int) $parent_folder->ID;
+	}
+
 	$bd_file = buddydrive_upload_item($_FILES, $bp_params['item_id']);
 
 	// Error while trying to upload the file
@@ -61,11 +73,6 @@ function buddydrive_upload_file()
 	/** @todo check it has no impact on BuddyDrive Editor */
 	$privacy = buddydrive_get_default_privacy();
 	$groups = array();
-
-	$parent_folder_id = 0;
-	if (!empty($bp_params['parent_folder_id'])) {
-		$parent_folder_id = (int) $bp_params['parent_folder_id'];
-	}
 
 	if (!empty($bp_params['privacy'])) {
 		$privacy = $bp_params['privacy'];
@@ -162,12 +169,30 @@ function buddydrive_fetch_items()
 	$buddydrive_items = new BuddyDrive_Item;
 	$buddydrive_items->get($query_args);
 
-	// Check if the user is allowed to view the items, even it's an admin
-	$items = array_filter((array) $buddydrive_items->query->posts, function ($item) {
-		return !(
-			$item->post_status === 'buddydrive_private' &&
-			(int) $item->post_author !== (int) bp_loggedin_user_id()
-		);
+	/**
+	 * Check if the user is allowed to view the items: private items only for their owner,
+	 * even if it's an admin, the others with the download rules. Password protected items
+	 * are listed without their password.
+	 */
+	$user_id = bp_loggedin_user_id();
+	$is_moderator = bp_current_user_can('bp_moderate');
+
+	$items = array_filter((array) $buddydrive_items->query->posts, function ($item) use ($user_id, $is_moderator) {
+		if ((int) $item->post_author === (int) $user_id) {
+			return true;
+		}
+
+		if ('buddydrive_private' === $item->post_status) {
+			return false;
+		}
+
+		if ($is_moderator) {
+			return true;
+		}
+
+		$can_list = buddydrive_check_download(buddydrive_get_buddyfile($item), $user_id);
+
+		return !is_wp_error($can_list) || 'empty_password' === $can_list->get_error_code();
 	});
 
 	$items = array_values(array_map('buddydrive_prepare_for_js', $items));
@@ -183,12 +208,17 @@ function buddydrive_fetch_items()
 	// Make sure to fetch additional data for the parent folder if needed
 	if (!empty($query_args['buddydrive_parent'])) {
 		$post_parent = buddydrive_get_buddyfile($query_args['buddydrive_parent'], buddydrive_get_folder_post_type());
+
+		if (empty($post_parent->ID)) {
+			wp_send_json_error($not_allowed);
+		}
+
 		$metas['post_parent_title'] = $post_parent->title;
 		$metas['post_parent_owner'] = $post_parent->user_id;
 
 		$labels = buddydrive_get_sharing_options();
 		$metas['post_parent_infos'] = sprintf(
-			_x('Files added to this folder will have the following privacy: %s', 'Parent folder privacy infos', 'buddydrive'),
+			/* translators: %s: privacy setting of the parent folder. */ _x('Files added to this folder will have the following privacy: %s', 'Parent folder privacy infos', 'buddydrive'),
 			esc_html($labels[$post_parent->check_for])
 		);
 
@@ -206,7 +236,7 @@ function buddydrive_fetch_items()
 				$object->buddydrive_type = 'group';
 				$group = buddydrive_prepare_bpobject_js($object);
 				$metas['post_parent_infos'] = sprintf(
-					_x('Files added to this folder will be accessible to members of this group: %s', 'Parent folder privacy infos', 'buddydrive'),
+					/* translators: %s: link to the group. */ _x('Files added to this folder will be accessible to members of this group: %s', 'Parent folder privacy infos', 'buddydrive'),
 					sprintf(
 						'<a href="%1$s" title="%2$s">%3$s<a>',
 						esc_url_raw($group['link']),
@@ -239,7 +269,7 @@ function buddydrive_fetch_items()
 
 				if (!empty($avatars)) {
 					$metas['post_parent_infos'] = sprintf(
-						_x('Files added to this folder will be accessible to the following members: %s', 'Parent folder privacy infos', 'buddydrive'),
+						/* translators: %s: avatars of the members. */ _x('Files added to this folder will be accessible to the following members: %s', 'Parent folder privacy infos', 'buddydrive'),
 						join(' ', $avatars)
 					);
 				}
@@ -307,21 +337,27 @@ function buddydrive_item_update()
 	// Validate file
 	$item = buddydrive_get_buddyfile((int) $r['id'], array(buddydrive_get_folder_post_type(), buddydrive_get_file_post_type()));
 
-	if (!$item->ID) {
+	if (empty($item->ID)) {
 		wp_send_json_error($error);
 	}
 
-	if ('folder' === $r['privacy']) {
-		// Set default privacy
-		$r['privacy'] = buddydrive_get_default_privacy();
-
-		// One folder & one only
-		if (!empty($r['folder'])) {
-			$r['parent_folder_id'] = reset(wp_parse_id_list($r['folder']));
-		}
+	// Capability check
+	if (!buddydrive_current_user_can('buddydrive_edit', array('item' => (array) $item))) {
+		wp_send_json_error(array(
+			'message' => __('You are not allowed to perform this action.', 'buddydrive'),
+		));
 	}
 
-	if (!buddydrive_update_item($r, $item)) {
+	// Only the fields the edit UI edits, never the owner, type, guid or status
+	$args = buddydrive_get_item_edit_args($r, $item);
+
+	if (is_wp_error($args)) {
+		wp_send_json_error(array(
+			'message' => $args->get_error_message(),
+		));
+	}
+
+	if (!buddydrive_update_item($args, $item)) {
 		wp_send_json_error(array(
 			'message' => __('Something went wrong. Please try again later.', 'buddydrive'),
 		));
@@ -362,6 +398,11 @@ function buddydrive_get_bpobjects()
 		'search_terms' => '',
 		'buddydrive_type' => ''
 	));
+
+	// Only moderators can list the folders and groups of another user (when editing their items)
+	if (!bp_current_user_can('bp_moderate')) {
+		$r['user_id'] = bp_loggedin_user_id();
+	}
 
 	if (bp_is_group()) {
 		$r['buddydrive_scope'] = 'groups';
@@ -413,18 +454,33 @@ function buddydrive_bulk_edit_items()
 		wp_send_json_error(array('error' => __('No items were sent.', 'buddydrive')));
 	}
 
+	// Capability check: skip the items the user cannot edit
+	$items = array();
+
+	foreach (wp_parse_id_list($r['items']) as $item_id) {
+		$item = buddydrive_get_buddyfile($item_id, array(buddydrive_get_folder_post_type(), buddydrive_get_file_post_type()));
+
+		if (!empty($item->ID) && buddydrive_current_user_can('buddydrive_bulk_edit', array('item' => (array) $item))) {
+			$items[] = (int) $item->ID;
+		}
+	}
+
+	if (empty($items)) {
+		wp_send_json_error(array('error' => __('You are not allowed to perform this action.', 'buddydrive')));
+	}
+
 	$bulk_edited = array();
 
 	if ('delete' === $r['type']) {
 		if (is_admin()) {
-			$bulk_edited = buddydrive_delete_item(array('ids' => $r['items'], 'user_id' => false));
+			$bulk_edited = buddydrive_delete_item(array('ids' => $items, 'user_id' => false));
 		} else {
-			$bulk_edited = buddydrive_delete_item(array('ids' => $r['items'], 'user_id' => bp_loggedin_user_id()));
+			$bulk_edited = buddydrive_delete_item(array('ids' => $items, 'user_id' => bp_loggedin_user_id()));
 		}
 	} elseif ('remove' === $r['type']) {
-		$bulk_edited = buddydrive_items_remove_parent($r['items']);
+		$bulk_edited = buddydrive_items_remove_parent($items);
 	} elseif ('group_remove' === $r['type']) {
-		$bulk_edited = buddydrive_items_remove_from_group($r['items']);
+		$bulk_edited = buddydrive_items_remove_from_group($items);
 	}
 
 	if (empty($bulk_edited)) {
@@ -558,7 +614,7 @@ function buddydrive_get_stats()
 			$response['detail'][] = array(
 				'type' => $buddydrive_status[$stat->post_status]['buddydrive_privacy'],
 				'label' => $buddydrive_status[$stat->post_status]['label'],
-				'stat' => sprintf(_n('%d file', '%d files', $stat->num, 'buddydrive'), number_format_i18n($stat->num)),
+				'stat' => sprintf(/* translators: %d: number of files. */ _n('%d file', '%d files', $stat->num, 'buddydrive'), number_format_i18n($stat->num)),
 			);
 
 			$total += $stat->num;
@@ -566,7 +622,7 @@ function buddydrive_get_stats()
 	}
 
 	if (!empty($total)) {
-		$response['total'] = sprintf(_n('(%d file)', '(%d files)', $total, 'buddydrive'), number_format_i18n($total));
+		$response['total'] = sprintf(/* translators: %d: number of files. */ _n('(%d file)', '(%d files)', $total, 'buddydrive'), number_format_i18n($total));
 	}
 
 	wp_send_json_success($response);

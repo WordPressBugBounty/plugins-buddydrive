@@ -4,7 +4,9 @@
  * Plugin Name: BuddyDrive
  * Plugin URI: https://wordpress.org/plugins/buddydrive/
  * Description: A plugin to share files, the BuddyPress way!
- * Version: 2.1.4
+ * Version: 2.1.5
+ * Requires at least: 5.9
+ * Requires PHP: 7.4
  * Author: ThemeKraft
  * Author URI: https://www.themekraft.com
  * License: GPLv2
@@ -86,7 +88,7 @@ if ( !class_exists( 'BuddyDrive' ) ) {
                     global $bud_fs;
                     if ( !isset( $bud_fs ) ) {
                         // Include Freemius SDK.
-                        require_once dirname( __FILE__ ) . '/includes/resources/freemius/start.php';
+                        require_once dirname( __FILE__ ) . '/vendor/autoload.php';
                         $bud_fs = fs_dynamic_init( array(
                             'id'                             => '19254',
                             'slug'                           => 'buddydrive-settings',
@@ -111,6 +113,7 @@ if ( !class_exists( 'BuddyDrive' ) ) {
                             ),
                             'bundle_license_auto_activation' => true,
                             'is_live'                        => true,
+                            'is_org_compliant'               => true,
                         ) );
                     }
                     return $bud_fs;
@@ -166,7 +169,7 @@ if ( !class_exists( 'BuddyDrive' ) ) {
          */
         private function setup_globals() {
             /** Version */
-            $this->version = '2.1.4';
+            $this->version = '2.1.5';
             $this->db_version = 214;
             /** Paths */
             // Setup some base path and URL information
@@ -354,8 +357,16 @@ if ( !class_exists( 'BuddyDrive' ) ) {
         public function warning() {
             $warnings = $resolve = array();
             if ( !self::version_check() ) {
-                $warnings[] = sprintf( esc_html__( 'BuddyDrive requires at least version %s of BuddyPress.', 'buddydrive' ), self::$required_bp_version );
-                $resolve[] = sprintf( esc_html__( 'Upgrade BuddyPress to at least version %s', 'buddydrive' ), self::$required_bp_version );
+                $warnings[] = sprintf( 
+                    /* translators: %s: minimum BuddyPress version. */
+                    esc_html__( 'BuddyDrive requires at least version %s of BuddyPress.', 'buddydrive' ),
+                    self::$required_bp_version
+                 );
+                $resolve[] = sprintf( 
+                    /* translators: %s: minimum BuddyPress version. */
+                    esc_html__( 'Upgrade BuddyPress to at least version %s', 'buddydrive' ),
+                    self::$required_bp_version
+                 );
             }
             if ( !empty( self::$bp_config ) ) {
                 $config = self::$bp_config;
@@ -375,7 +386,11 @@ if ( !class_exists( 'BuddyDrive' ) ) {
                 if ( is_super_admin() ) {
                     $deactivate_link = ( !empty( $config['network_active'] ) ? network_admin_url( 'plugins.php' ) : admin_url( 'plugins.php' ) );
                     $deactivate_link = '<a href="' . esc_url( $deactivate_link ) . '">' . esc_html__( 'deactivate', 'buddydrive' ) . '</a>';
-                    $resolve_message = '<ol><li>' . sprintf( __( 'You should %s BuddyDrive', 'buddydrive' ), $deactivate_link ) . '</li>';
+                    $resolve_message = '<ol><li>' . sprintf( 
+                        /* translators: %s: "deactivate" link. */
+                        __( 'You should %s BuddyDrive', 'buddydrive' ),
+                        $deactivate_link
+                     ) . '</li>';
                     foreach ( (array) $resolve as $step ) {
                         $resolve_message .= '<li>' . $step . '</li>';
                     }

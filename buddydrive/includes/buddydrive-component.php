@@ -104,7 +104,7 @@ class BuddyDrive_Component extends BP_Component
 			'slug' => buddydrive_get_slug(),
 			'root_slug' => isset($bp->pages->{$this->id}->slug) ? $bp->pages->{$this->id}->slug : buddydrive_get_slug(),
 			'has_directory' => true,
-			'directory_title' => sprintf(__('%s download page', 'buddydrive'), buddydrive_get_name()),
+			'directory_title' => sprintf(/* translators: %s: BuddyDrive component name. */ __('%s download page', 'buddydrive'), buddydrive_get_name()),
 			'notification_callback' => 'buddydrive_format_notifications',
 			'search_string' => __('Search files...', 'buddydrive')
 		);
@@ -135,7 +135,7 @@ class BuddyDrive_Component extends BP_Component
 
 		// Only show count on older UI
 		if (bp_is_my_profile() && buddydrive_use_deprecated_ui()) {
-			$nav = sprintf(__('%s <span class="count">%d</span>', 'buddydrive'), buddydrive_get_name(), buddydrive_count_user_files());
+			$nav = sprintf(/* translators: 1: BuddyDrive component name, 2: number of files. */ __('%1$s <span class="count">%2$d</span>', 'buddydrive'), buddydrive_get_name(), buddydrive_count_user_files());
 		}
 
 		$main_nav = array(

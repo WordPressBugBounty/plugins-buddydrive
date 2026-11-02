@@ -1,0 +1,10 @@
+{
+    "name": "themekraft/buddydrive",
+    "description": "Share files and folders with your BuddyPress community.",
+    "license": "GPL-2.0-or-later",
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "require": {
+        "freemius/wordpress-sdk": "^2.13.1"
+    }
+}

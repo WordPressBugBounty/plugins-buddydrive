@@ -793,6 +793,97 @@ function buddydrive_update_item($args = '', $item = false)
 }
 
 /**
+ * Builds the arguments of a front-end item edit from the request
+ *
+ * Only the fields the edit UI edits are kept. Ownership, type, MIME type, guid and
+ * status always come from the stored item. A new parent folder must be one the
+ * current user can put items in.
+ *
+ * @since 2.1.5
+ *
+ * @param array  $request The edit request (slashed, as in $_POST).
+ * @param object $item    The BuddyDrive item being edited.
+ * @return array|WP_Error The arguments for buddydrive_update_item(), or an error.
+ */
+function buddydrive_get_item_edit_args($request = array(), $item = null)
+{
+	$not_allowed = new WP_Error('not_allowed', __('You are not allowed to perform this action.', 'buddydrive'));
+
+	if (empty($item->ID)) {
+		return new WP_Error('unknown_item', __('Unknown item.', 'buddydrive'));
+	}
+
+	$fields = (array) apply_filters('buddydrive_item_edit_fields', array(
+		'title',
+		'content',
+		'privacy',
+		'password',
+		'groups',
+		'members',
+		'folder',
+		'parent_folder_id',
+	), $item);
+
+	$args = array_intersect_key((array) $request, array_flip($fields));
+
+	foreach (array('title', 'content', 'password') as $field) {
+		if (isset($args[$field])) {
+			$args[$field] = wp_kses((string) $args[$field], array());
+		}
+	}
+
+	foreach (array('groups', 'members') as $field) {
+		if (isset($args[$field])) {
+			$args[$field] = wp_parse_id_list($args[$field]);
+		}
+	}
+
+	$folder_id = 0;
+
+	if (isset($args['privacy'])) {
+		$args['privacy'] = sanitize_key($args['privacy']);
+
+		if ('folder' === $args['privacy']) {
+			$folder_ids = isset($args['folder']) ? wp_parse_id_list($args['folder']) : array();
+
+			// One folder & one only
+			$folder_id = (int) reset($folder_ids);
+
+			if (!$folder_id) {
+				return new WP_Error('unknown_folder', __('Please make sure to select a folder using the autocomplete field.', 'buddydrive'));
+			}
+
+			$args['privacy'] = buddydrive_get_default_privacy();
+			$args['parent_folder_id'] = $folder_id;
+		} elseif (!buddydrive_get_privacy('buddydrive_' . $args['privacy'])) {
+			return new WP_Error('unknown_privacy', __('Unknown privacy option.', 'buddydrive'));
+		}
+	}
+
+	unset($args['folder']);
+
+	if (isset($args['parent_folder_id'])) {
+		$args['parent_folder_id'] = absint($args['parent_folder_id']);
+		$folder_id = $args['parent_folder_id'];
+	}
+
+	// Moving the item into another folder
+	if ($folder_id && $folder_id !== (int) $item->post_parent) {
+		if ($folder_id === (int) $item->ID) {
+			return $not_allowed;
+		}
+
+		$folder = buddydrive_get_buddyfile($folder_id, buddydrive_get_folder_post_type());
+
+		if (empty($folder->ID) || !buddydrive_current_user_can('buddydrive_add_to_folder', array('folder' => $folder))) {
+			return $not_allowed;
+		}
+	}
+
+	return $args;
+}
+
+/**
  * Deletes one or more BuddyDrive Item(s)
  *
  * @since 2.0.0 Returns an array of deleted item ids on success

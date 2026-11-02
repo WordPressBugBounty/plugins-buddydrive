@@ -36,7 +36,7 @@ function buddydrive_user_used_quota( $type = false, $user_id = false ) {
 		if ( 'diff' === $type ) {
 			return $space_left['diff'];
 		} else {
-			return apply_filters( 'buddydrive_get_user_space_left', sprintf( __( '<span id="buddy-quota">%s</span>&#37; used', 'buddydrive' ), $space_left['percent'] ), $space_left );
+			return apply_filters( 'buddydrive_get_user_space_left', sprintf( /* translators: %s: percentage of the storage quota used. */ __( '<span id="buddy-quota">%s</span>&#37; used', 'buddydrive' ), $space_left['percent'] ), $space_left );
 		}
 
 	}

@@ -144,7 +144,7 @@ function buddydrive_admin_setting_callback_custom_section()
 
 <?php if (!empty($page_id)): ?>
 <p class="description">
-    <?php printf(__('NB : to customize the name and the slug of the main directory page, you need to edit the title and permalink of its <a href="%s">WordPress page</a>', 'buddydrive'), esc_url(get_edit_post_link($page_id))); ?>
+    <?php printf(/* translators: %s: URL to edit the directory page. */ __('NB : to customize the name and the slug of the main directory page, you need to edit the title and permalink of its <a href="%s">WordPress page</a>', 'buddydrive'), esc_url(get_edit_post_link($page_id))); ?>
 </p>
 
 <?php

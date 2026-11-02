@@ -657,7 +657,7 @@ function buddydrive_get_upload_error_strings()
 
 	$upload_errors = array(
 		9 => __('Not enough space left to upload your file', 'buddydrive'),
-		10 => sprintf(__('This file is too big. Files must be less than %s MB in size.', 'buddydrive'), buddydrive_max_upload_size()),
+		10 => sprintf(/* translators: %s: maximum upload size in MB. */ __('This file is too big. Files must be less than %s MB in size.', 'buddydrive'), buddydrive_max_upload_size()),
 		11 => __('You have used your space quota. Please delete files before uploading.', 'buddydrive'),
 	);
 
@@ -891,7 +891,7 @@ function buddydrive_get_upgrade_tasks()
 			array(
 				'action_id' => 'upgrade_item_stati',
 				'count' => $wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->posts} p LEFT JOIN {$wpdb->postmeta} m on( p.ID = m.post_id ) WHERE p.post_status = 'publish' AND m.meta_key = %s", '_buddydrive_sharing_option'),
-				'message' => _x('Status of files and folders - %d item(s) to upgrade', 'Upgrader feedback message', 'buddydrive'),
+				'message' => /* translators: %d: number of items to upgrade. */ _x('Status of files and folders - %d item(s) to upgrade', 'Upgrader feedback message', 'buddydrive'),
 				'callback' => 'buddydrive_update_items_status'
 			),
 			array(
@@ -1173,6 +1173,24 @@ function buddydrive_current_user_can($capability = 'buddydrive_upload', $args = 
 
 		if (!$can && !empty($args['group_id'])) {
 			$can = (bool) groups_is_user_admin($user_id, $args['group_id']);
+		}
+
+		// Put a file or folder inside a folder: the user's own folders, or folders shared with one of the user's groups
+	} elseif ('buddydrive_add_to_folder' === $capability) {
+		$can = bp_current_user_can('bp_moderate');
+
+		if (!$can && !empty($args['folder'])) {
+			$folder = (array) $args['folder'];
+			$can = (int) $folder['user_id'] === (int) $user_id;
+
+			if (!$can && 'buddydrive_groups' === $folder['post_status'] && !empty($folder['group']) && bp_is_active('groups')) {
+				foreach (wp_parse_id_list($folder['group']) as $group_id) {
+					if (groups_is_user_member($user_id, $group_id)) {
+						$can = true;
+						break;
+					}
+				}
+			}
 		}
 	}
 

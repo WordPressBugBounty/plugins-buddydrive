@@ -96,7 +96,7 @@ if (class_exists('BP_Group_Extension')):
     <div class="field-group">
         <div class="checkbox">
             <label><input type="checkbox" name="_group_buddydrive_activate" value="1" <?php checked($checked) ?>>
-                <?php printf(__('Activate %s', 'buddydrive'), $this->name); ?></label>
+                <?php printf(/* translators: %s: feature name. */ __('Activate %s', 'buddydrive'), $this->name); ?></label>
         </div>
     </div>
 

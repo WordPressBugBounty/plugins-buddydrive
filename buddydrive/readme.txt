@@ -1,9 +1,9 @@
 === BuddyDrive ===
 Contributors: themekraft
 Tags: BuddyPress, files, folders
-Requires at least: 4.5
-Tested up to: 6.8
-Stable tag: 2.1.4
+Requires at least: 5.9
+Tested up to: 7.1
+Stable tag: 2.1.5
 Requires PHP: 7.4
 License: GPLv2
 
@@ -79,6 +79,13 @@ We love hearing your needs, want, desires, and ideas for BuddyPress! Our goal is
 5. BuddyDrive items administration.
 
 == Changelog ==
+
+= 2.1.5 - 2 Nov 2026 =
+* Security: editing a file or folder from the front end checks that the user owns it (or can moderate the community), and only the name, description, privacy and folder can be changed. The owner, type and file location always stay as stored.
+* Security: bulk actions skip the items the user is not allowed to edit.
+* Security: files and folders can only be added (on edit or upload) to the user's own folders or to folders shared with one of the user's groups.
+* Security: file lists only include files the user is allowed to open, and the folder and group lookup of the edit screen only lists the user's own folders and groups.
+* New `buddydrive_item_edit_fields` filter to allow more fields in the front-end edit.
 
 = 2.1.3 =
 * Replaced bp_get_root_domain() to bp_get_root_domain().

@@ -203,20 +203,6 @@ if (!class_exists('BuddyDrive_Admin')):
 				'buddydrive_admin_settings'
 			);
 
-			if (function_exists('bud_fs')) {
-				require_once buddydrive_get_plugin_dir() . '.pricing-plan/pricing-page.php';
-				if (bud_fs()->is_not_paying()) {
-					$this->hook_suffixes[] = add_submenu_page(
-						'buddydrive-files',
-						_x('Bundle', 'buddydrive'),
-						_x('Go Pro!', 'buddydrive'),
-						'manage_options',
-						'bundle_screen',
-						'buddyforms_bundle_screen_content'
-					);
-				}
-			}
-
 			// About
 			$this->hook_suffixes[] = add_dashboard_page(
 				__('Welcome to BuddyDrive', 'buddydrive'),
@@ -495,9 +481,9 @@ body.rtl .about-wrap .buddydrive-badge {
 			$settings_url = add_query_arg(array('page' => 'buddydrive'), bp_get_admin_url($this->settings_page));
 ?>
 <div class="wrap about-wrap">
-    <h1><?php printf(__('BuddyDrive %s', 'buddydrive'), $display_version); ?></h1>
+    <h1><?php printf(/* translators: %s: BuddyDrive version. */ __('BuddyDrive %s', 'buddydrive'), $display_version); ?></h1>
     <div class="about-text">
-        <?php printf(__('Thank you for upgrading to the latest version of BuddyDrive! BuddyDrive %s is ready to manage the files and folders of your buddies!', 'buddydrive'), $display_version); ?>
+        <?php printf(/* translators: %s: BuddyDrive version. */ __('Thank you for upgrading to the latest version of BuddyDrive! BuddyDrive %s is ready to manage the files and folders of your buddies!', 'buddydrive'), $display_version); ?>
     </div>
     <div class="buddydrive-badge"></div>
 
@@ -563,7 +549,7 @@ body.rtl .about-wrap .buddydrive-badge {
     <hr />
 
     <div class="changelog">
-        <h2><?php printf(__('The other improvements in %s', 'buddydrive'), $display_version); ?></h2>
+        <h2><?php printf(/* translators: %s: BuddyDrive version. */ __('The other improvements in %s', 'buddydrive'), $display_version); ?></h2>
 
         <div class="under-the-hood three-col">
             <div class="col">
@@ -804,7 +790,7 @@ body.rtl .about-wrap .buddydrive-badge {
 				}
 			}
 
-			printf(_n('BuddyDrive is almost ready, please wait for the %s following task to proceed.', 'BuddyDrive is almost ready, please wait for the %s following tasks to proceed.', count($tasks), 'buddydrive'), number_format_i18n(count($tasks)));
+			printf(/* translators: %s: number of upgrade tasks. */ _n('BuddyDrive is almost ready, please wait for the %s following task to proceed.', 'BuddyDrive is almost ready, please wait for the %s following tasks to proceed.', count($tasks), 'buddydrive'), number_format_i18n(count($tasks)));
 		}
 		?>
     </p>
@@ -868,7 +854,7 @@ body.rtl .about-wrap .buddydrive-badge {
 
 				// This shouldn't happen..
 				if (0 === $did && ((int) $_POST['count'] > ((int) $_POST['done'] + (int) $did))) {
-					wp_send_json_error(array('message' => __('%d item(s) could not be updated', 'buddydrive'), 'type' => 'warning', 'action_id' => $_POST['id']));
+					wp_send_json_error(array('message' => /* translators: %d: number of items that could not be updated. */ __('%d item(s) could not be updated', 'buddydrive'), 'type' => 'warning', 'action_id' => $_POST['id']));
 				}
 			} else {
 				wp_send_json_error($error);

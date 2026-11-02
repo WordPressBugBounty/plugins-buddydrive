@@ -210,7 +210,7 @@ function buddydrive_files_admin_index()
 		$deleted = !empty($_REQUEST['deleted']) ? (int) $_REQUEST['deleted'] : 0;
 
 		if ($deleted > 0) {
-			$messages[] = sprintf(_n('%s item has been permanently deleted.', '%s items have been permanently deleted.', $deleted, 'buddydrive'), number_format_i18n($deleted));
+			$messages[] = sprintf(/* translators: %s: number of deleted items. */ _n('%s item has been permanently deleted.', '%s items have been permanently deleted.', $deleted, 'buddydrive'), number_format_i18n($deleted));
 		}
 	}
 
@@ -228,7 +228,7 @@ function buddydrive_files_admin_index()
 
         <?php if (!empty($_REQUEST['s'])): ?>
         <span
-            class="subtitle"><?php printf(__('Search results for &#8220;%s&#8221;', 'buddydrive'), wp_html_excerpt(esc_html(stripslashes($_REQUEST['s'])), 50)); ?></span>
+            class="subtitle"><?php printf(/* translators: %s: search terms. */ __('Search results for &#8220;%s&#8221;', 'buddydrive'), wp_html_excerpt(esc_html(stripslashes($_REQUEST['s'])), 50)); ?></span>
         <?php endif; ?>
     </h2>
 
@@ -354,7 +354,7 @@ function buddydrive_files_admin_edit()
     </form>
 
     <?php else: ?>
-    <p><?php printf(__('No item found with this ID. <a href="%s">Go back and try again</a>.', 'buddydrive'), esc_url(bp_get_admin_url('admin.php?page=buddydrive-files'))); ?>
+    <p><?php printf(/* translators: %s: URL of the BuddyDrive files screen. */ __('No item found with this ID. <a href="%s">Go back and try again</a>.', 'buddydrive'), esc_url(bp_get_admin_url('admin.php?page=buddydrive-files'))); ?>
     </p>
     <?php endif; ?>
 
@@ -454,7 +454,7 @@ function buddydrive_admin_edit_metabox_privacy($item)
 
 <div class="buddydrive-privacy-section" id="buddydrive-privacy-section-options">
     <label for="buddydrive-sharing-option"><?php _e('Item Sharing options', 'buddydrive'); ?></label>
-    <p><?php printf(__('Privacy of this item rely on its parent <a href="%s">folder</a>', 'buddydrive'), esc_url(add_query_arg(array('page' => 'buddydrive-files', 'bid' => $item->post_parent, 'action' => 'edit'), bp_get_admin_url('admin.php')))); ?>
+    <p><?php printf(/* translators: %s: URL to edit the parent folder. */ __('Privacy of this item rely on its parent <a href="%s">folder</a>', 'buddydrive'), esc_url(add_query_arg(array('page' => 'buddydrive-files', 'bid' => $item->post_parent, 'action' => 'edit'), bp_get_admin_url('admin.php')))); ?>
     </p>
 </div>
 

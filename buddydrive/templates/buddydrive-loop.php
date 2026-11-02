@@ -1,5 +1,9 @@
 <?php
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /**
  * BuddyDrive Loop
  *
@@ -59,7 +63,7 @@
 			<tr id="no-buddyitems">
 				<td colspan="5">
 					<div id="message" class="info">
-						<p><?php printf( __( 'Sorry, there were no %s items found.', 'buddydrive' ), buddydrive_get_name() ); ?></p>
+						<p><?php printf( /* translators: %s: BuddyDrive component name. */ __( 'Sorry, there were no %s items found.', 'buddydrive' ), buddydrive_get_name() ); ?></p>
 					</div>
 				</td>
 			</tr>
