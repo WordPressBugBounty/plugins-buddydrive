@@ -46,9 +46,6 @@ window.buddydrive = window.buddydrive || {};
 					pushState: true,
 					root: rootPath
 				});
-
-				// Force route to run in case of direct page load
-				Backbone.history.loadUrl(Backbone.history.fragment);
 			}
 		},
 
@@ -138,8 +135,6 @@ window.buddydrive = window.buddydrive || {};
 
 		listView: function () {
 			const fragment = Backbone.history.getFragment().replace(/\/+$/, ''); // remove trailing slash
-
-			console.log('listView fragment:', fragment);
 
 			let scope = 'public';
 

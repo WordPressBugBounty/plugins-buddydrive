@@ -628,7 +628,8 @@ function buddydrive_maybe_redirect_oldlink()
 	if (!is_404())
 		return;
 
-	$root_domain_url = bp_get_root_url();
+	// bp_get_root_url() only exists since BuddyPress 12.0.
+	$root_domain_url = function_exists('bp_get_root_url') ? bp_get_root_url() : bp_get_root_domain();
 	$maybe_buddydrive = trailingslashit($root_domain_url . esc_url($_SERVER['REQUEST_URI']));
 
 	$buddydrive_slug = buddydrive()->buddydrive_slug;
@@ -967,24 +968,6 @@ function buddydrive_register_ui_cssjs()
 				);
 			}
 		}
-	}
-
-	// Fix BP_uploader missing on frontend
-	if (is_user_logged_in() && !is_admin()) {
-		add_filter('bp_attachments_get_plupload_l10n', 'buddydrive_editor_strings', 10, 1);
-		add_filter('bp_attachments_get_plupload_default_settings', 'buddydrive_editor_settings', 10, 1);
-		add_filter('buddydrive_attachment_script_data', 'buddydrive_editor_script_data', 10, 1);
-
-		bp_attachments_enqueue_scripts('BuddyDrive_Attachment');
-
-		// Optionally print templates
-		add_action('wp_footer', function () {
-			bp_attachments_get_template_part('uploader');
-		});
-
-		remove_filter('bp_attachments_get_plupload_l10n', 'buddydrive_editor_strings', 10, 1);
-		remove_filter('bp_attachments_get_plupload_default_settings', 'buddydrive_editor_settings', 10, 1);
-		remove_filter('buddydrive_attachment_script_data', 'buddydrive_editor_script_data', 10, 1);
 	}
 
 	// Define UI Scrips

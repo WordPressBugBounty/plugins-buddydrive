@@ -3,7 +3,7 @@ Contributors: themekraft
 Tags: BuddyPress, files, folders
 Requires at least: 5.9
 Tested up to: 7.1
-Stable tag: 2.1.5
+Stable tag: 2.1.6
 Requires PHP: 7.4
 License: GPLv2
 
@@ -79,6 +79,12 @@ We love hearing your needs, want, desires, and ideas for BuddyPress! Our goal is
 5. BuddyDrive items administration.
 
 == Changelog ==
+
+= 2.1.6 - 13 Nov 2026 =
+* Fix: the BuddyDrive tab in the member profile was empty with classic themes, so files could not be uploaded from it.
+* Fix: a fatal error on "page not found" pages with BuddyPress 11 or older.
+* Fix: BuddyDrive no longer loads its upload scripts on every page, including a missing BuddyPress script that returned a 404.
+* Fix: the file list in the profile loaded twice on every visit.
 
 = 2.1.5 - 2 Nov 2026 =
 * Security: editing a file or folder from the front end checks that the user owns it (or can moderate the community), and only the name, description, privacy and folder can be changed. The owner, type and file location always stay as stored.

@@ -46,8 +46,6 @@ function buddydrive_register_public_file_scripts()
 		true
 	);
 
-	wp_enqueue_script('bp-uploader');
-
 	if (!buddydrive_use_deprecated_ui()) {
 		buddydrive_register_ui_cssjs();
 	}

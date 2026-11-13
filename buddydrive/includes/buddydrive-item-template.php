@@ -91,6 +91,8 @@ function buddydrive_editor( $editor_id = '' ) {
 		$buddydrive->editor_id = $editor_id;
 	}
 
+	buddydrive_maybe_register_scripts();
+
 	// Temporary filters to add custom strings and settings
 	add_filter( 'bp_attachments_get_plupload_l10n',             'buddydrive_editor_strings',     10, 1 );
 	add_filter( 'bp_attachments_get_plupload_default_settings', 'buddydrive_editor_settings',    10, 1 );

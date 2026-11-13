@@ -183,7 +183,7 @@ function buddydrive_localize_ui()
  */
 function buddydrive_ui()
 {
-	// wp_localize_script('buddydrive-models-js', 'BuddyDrive_App', buddydrive_localize_ui());
+	buddydrive_maybe_register_scripts();
 
 	if (!buddydrive_current_user_can('buddydrive_upload')) {
 		// css front-end complementary styles

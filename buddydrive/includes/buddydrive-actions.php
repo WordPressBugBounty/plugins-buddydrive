@@ -25,33 +25,6 @@ add_action('bp_template_redirect', 'buddydrive_maybe_redirect_oldlink', 100);
 function buddydrive_init()
 {
 	do_action('buddydrive_init');
-	bp_core_register_common_scripts();
-
-	// Register bp-plupload if not registered
-	if (!wp_script_is('bp-plupload', 'registered')) {
-		wp_register_script(
-			'bp-plupload',
-			buddypress()->plugin_url . 'bp-core/js/bp-plupload.js',
-			['plupload'],
-			buddypress()->version,
-			true
-		);
-	}
-
-	// Register bp-uploader if not registered
-	if (!wp_script_is('bp-uploader', 'registered')) {
-		wp_register_script(
-			'bp-uploader',
-			buddypress()->plugin_url . 'bp-core/js/bp-uploader.js',
-			['jquery', 'json2', 'plupload', 'wp-backbone', 'bp-plupload'],
-			buddypress()->version,
-			true
-		);
-	}
-
-	// Enqueue both scripts
-	wp_enqueue_script('bp-plupload');
-	wp_enqueue_script('bp-uploader');
 }
 
 function buddydrive_ready()
@@ -76,7 +49,32 @@ function buddydrive_after_setup_theme()
 
 function buddydrive_register_scripts()
 {
+	// Only once: buddydrive_maybe_register_scripts() may have run it already.
+	if (did_action('buddydrive_register_scripts')) {
+		return;
+	}
+
 	do_action('buddydrive_register_scripts');
+}
+
+/**
+ * Register the scripts now if bp_enqueue_scripts has not run yet.
+ *
+ * Block themes render the page content before wp_head, so the BuddyDrive UI
+ * and the public editor can run before the scripts are registered. Without
+ * this, BuddyPress cannot attach the uploader settings (BP_Uploader) to
+ * bp-plupload and uploads do not start.
+ *
+ * @since 2.1.6
+ */
+function buddydrive_maybe_register_scripts()
+{
+	if (did_action('buddydrive_register_scripts')) {
+		return;
+	}
+
+	bp_core_register_common_scripts();
+	buddydrive_register_scripts();
 }
 
 function buddydrive_enqueue_scripts()
