@@ -82,6 +82,18 @@ function buddydrive_upload_file()
 		}
 	}
 
+	// Only groups the user belongs to (a file added to a folder takes the folder's groups)
+	if ('groups' === $privacy && !$parent_folder_id) {
+		$groups = buddydrive_get_shareable_groups($groups);
+
+		if (empty($groups)) {
+			bp_attachments_json_response(false, $is_html4, array(
+				'type' => 'upload_error',
+				'message' => __('You are not allowed to share files with this group.', 'buddydrive'),
+			));
+		}
+	}
+
 	$buddyfile_id = buddydrive_add_item(array(
 		'user_id' => $bp_params['item_id'],
 		'type' => buddydrive_get_file_post_type(),
@@ -514,6 +526,8 @@ function buddydrive_add_folder()
 		wp_send_json_error($not_allowed);
 	}
 
+	$profile_user_id = 0;
+
 	if (!empty($_POST['username'])) {
 		$profile_user_id = bp_core_get_userid($_POST['username']);
 	}
@@ -548,10 +562,16 @@ function buddydrive_add_folder()
 	}
 
 	if (bp_is_group()) {
+		$groups = buddydrive_get_shareable_groups(array(bp_get_current_group_id()));
+
+		if (empty($groups)) {
+			wp_send_json_error($not_allowed);
+		}
+
 		$args = array_merge($args,
 			array(
 				'privacy' => buddydrive_get_privacy('buddydrive_groups'),
-				'groups' => array(bp_get_current_group_id()),
+				'groups' => $groups,
 			));
 	}
 
@@ -629,3 +649,75 @@ function buddydrive_get_stats()
 }
 
 add_action('wp_ajax_buddydrive_get_stats', 'buddydrive_get_stats');
+
+/**
+ * The BuddyDrive Ajax actions
+ *
+ * @since 2.1.7
+ *
+ * @return array The action names.
+ */
+function buddydrive_get_ajax_actions()
+{
+	return array(
+		'buddydrive_upload',
+		'buddydrive_fetch_items',
+		'buddydrive_item_update',
+		'buddydrive_get_bpobjects',
+		'buddydrive_bulk_edit_items',
+		'buddydrive_add_folder',
+		'buddydrive_get_stats',
+	);
+}
+
+/**
+ * Lets BuddyPress set its URI globals (current group, displayed user) for the
+ * BuddyDrive Ajax actions
+ *
+ * BuddyPress 12+ only parses the referer of the Ajax actions registered with
+ * bp_ajax_register_action(), so bp_is_group() was always false in these
+ * requests and the group tab could neither list nor create group items.
+ * Older versions parse the referer of every Ajax request.
+ *
+ * @since 2.1.7
+ */
+function buddydrive_register_ajax_actions()
+{
+	if (!function_exists('bp_ajax_register_action')) {
+		return;
+	}
+
+	foreach (buddydrive_get_ajax_actions() as $action) {
+		bp_ajax_register_action($action);
+	}
+}
+
+add_action('bp_init', 'buddydrive_register_ajax_actions');
+
+/**
+ * Keeps the BuddyDrive Ajax answers at HTTP 200 when the referer is a BuddyDrive URL
+ * BuddyPress does not route
+ *
+ * BuddyDrive serves `folder/<id>` (and the app's `edit/<id>`) under the member's
+ * BuddyDrive tab itself. When BuddyPress 12+ parses such a referer it finds no
+ * sub navigation for it and sends a 404 status, which made the uploader and the
+ * app treat valid answers as errors.
+ *
+ * @since 2.1.7
+ */
+function buddydrive_ajax_keep_ok_status()
+{
+	if (!wp_doing_ajax() || empty($_REQUEST['action']) || !is_404()) {
+		return;
+	}
+
+	if (!in_array(sanitize_key(wp_unslash($_REQUEST['action'])), buddydrive_get_ajax_actions(), true)) {
+		return;
+	}
+
+	$GLOBALS['wp_query']->is_404 = false;
+	status_header(200);
+}
+
+// After bp_admin_init (admin_init, 10), which parses the referer.
+add_action('admin_init', 'buddydrive_ajax_keep_ok_status', 11);

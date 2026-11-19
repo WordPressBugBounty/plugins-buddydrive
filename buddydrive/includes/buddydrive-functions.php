@@ -331,18 +331,38 @@ function buddydrive_get_root_url()
 	return $user_domain . '/' . $buddydrive_slug;
 }
 
+/**
+ * Gets the path of the BuddyDrive section the app is displayed in
+ *
+ * The app's folder and edit links are built from it. A page opened from a
+ * folder or edit URL (`.../buddydrive/folder/12/`) gives the path of its section
+ * (`.../buddydrive`), so the links do not pile up (`.../folder/12/edit/34`).
+ *
+ * @since 2.1.3
+ * @since 2.1.7 Drops the `folder/<id>` and `edit/<id>` parts of the requested URL.
+ *
+ * @return string The path, without leading or trailing slashes.
+ */
 function buddydrive_get_path_url()
 {
-	$path = $_SERVER['REQUEST_URI'];
-
-	// Remove leading slash
-	$path = ltrim($path, '/');
+	$path = isset($_SERVER['REQUEST_URI']) ? wp_unslash($_SERVER['REQUEST_URI']) : '';
 
 	// Remove query string
-	$path = strtok($path, '?');
+	$path = (string) strtok($path, '?');
 
-	// Remove trailing slash
-	$path = rtrim($path, '/');
+	// Remove leading and trailing slashes
+	$path = trim($path, '/');
+
+	// Only what comes after the BuddyDrive slug can be an item route
+	$slug = trim(buddydrive_get_slug(), '/');
+	$position = strpos('/' . $path . '/', '/' . $slug . '/');
+
+	if (false !== $position) {
+		$root = substr($path, 0, $position + strlen($slug));
+		$section = substr($path, $position + strlen($slug));
+		$section = preg_replace('#/(?:folder|edit)/\d+(?:/.*)?$#', '', $section);
+		$path = $root . rtrim($section, '/');
+	}
 
 	return $path;
 }
@@ -620,12 +640,15 @@ function buddydrive_get_allowed_upload_exts()
  * @uses bp_get_root_url() to get the blog's url where BuddyPress is running
  * @uses esc_url() to sanitize url
  * @uses buddydrive() to get the BuddyDrive globals
- * @uses buddydrive_get_root_url() to get the plugin's root url
+ * @uses buddydrive_get_buddyfile() to find the owner of an old item link
  * @uses bp_core_redirect() to redirect to the BuddyDrive item
  */
 function buddydrive_maybe_redirect_oldlink()
 {
-	if (!is_404())
+	// BuddyPress < 12 serves the root BuddyDrive page itself, which has no content of its own.
+	$is_root_page = bp_is_current_component('buddydrive') && !bp_displayed_user_id() && !bp_current_action();
+
+	if (!is_404() && !$is_root_page)
 		return;
 
 	// bp_get_root_url() only exists since BuddyPress 12.0.
@@ -633,13 +656,63 @@ function buddydrive_maybe_redirect_oldlink()
 	$maybe_buddydrive = trailingslashit($root_domain_url . esc_url($_SERVER['REQUEST_URI']));
 
 	$buddydrive_slug = buddydrive()->buddydrive_slug;
-	$buddydrive_old_root_url = trailingslashit($root_domain_url) . $buddydrive_slug;
+	$buddydrive_old_root_url = trailingslashit(trailingslashit($root_domain_url) . $buddydrive_slug);
 
-	if (strpos($maybe_buddydrive, $buddydrive_old_root_url) === 0) {
-		$buddydrive_new_url = str_replace($buddydrive_old_root_url, buddydrive_get_root_url(), $maybe_buddydrive);
-
-		bp_core_redirect($buddydrive_new_url);
+	if (strpos($maybe_buddydrive, $buddydrive_old_root_url) !== 0) {
+		return;
 	}
+
+	$path = trim(substr($maybe_buddydrive, strlen($buddydrive_old_root_url)), '/');
+	$parts = explode('/', $path);
+	$buddydrive_new_url = '';
+
+	// Old item links go to the item owner's BuddyDrive, whoever opens them.
+	if (isset($parts[0], $parts[1]) && in_array($parts[0], array('file', 'folder'), true)) {
+		$type = 'file' === $parts[0] ? buddydrive_get_file_post_type() : buddydrive_get_folder_post_type();
+		$item = buddydrive_get_buddyfile(sanitize_title($parts[1]), $type);
+
+		if (!empty($item->link)) {
+			$buddydrive_new_url = $item->link;
+		}
+
+		// Anything else goes to the logged-in user's BuddyDrive.
+	} elseif (is_user_logged_in()) {
+		$buddydrive_new_url = buddydrive_get_user_buddydrive_url(bp_loggedin_user_id());
+
+		if ('' !== $path) {
+			$buddydrive_new_url .= trailingslashit($path);
+		}
+	}
+
+	// Never redirect a request to itself: keep the 404.
+	if (empty($buddydrive_new_url) || untrailingslashit($buddydrive_new_url) === untrailingslashit($maybe_buddydrive)) {
+		return;
+	}
+
+	bp_core_redirect($buddydrive_new_url);
+}
+
+/**
+ * Builds the regex that matches BuddyDrive item links for oEmbed
+ *
+ * Matches links to any member's BuddyDrive (members/<user>/<slug>/file/<name>/)
+ * and the old ones on the site root (<slug>/file/<name>/), so it does not depend
+ * on who is looking at the content.
+ *
+ * @since 2.1.7
+ *
+ * @return string the regex, with file or folder as the first match and the item name as the second.
+ */
+function buddydrive_get_embed_regex()
+{
+	$root_domain_url = function_exists('bp_get_root_url') ? bp_get_root_url() : bp_get_root_domain();
+	$root = preg_replace('#^https?://#i', '', untrailingslashit($root_domain_url));
+	$slugs = array_unique(array(trim(buddydrive_get_slug(), '/'), trim(buddydrive()->buddydrive_slug, '/')));
+	$slugs = implode('|', array_map(function ($slug) {
+		return preg_quote($slug, '#');
+	}, array_filter($slugs)));
+
+	return '#^https?://' . preg_quote($root, '#') . '/(?:[^?\#]+/)?(?:' . $slugs . ')/(file|folder)/([^/?\#]+)/?#i';
 }
 
 /**
@@ -1071,7 +1144,8 @@ function buddydrive_current_user_can($capability = 'buddydrive_upload', $args = 
 	// Upload/Creare folder
 	if ('buddydrive_upload' === $capability) {
 		if ($profile_user_id) {
-			$can = $user_id > 0;
+			// Only the owner manages a member's BuddyDrive (uploads always go to the uploader's own one)
+			$can = $user_id > 0 && (int) $profile_user_id === (int) $user_id;
 		} elseif (bp_is_group()) {
 			$can = (bool) groups_is_user_member($user_id, bp_get_current_group_id());
 		} else {
@@ -1151,7 +1225,9 @@ function buddydrive_current_user_can($capability = 'buddydrive_upload', $args = 
 		$can = bp_current_user_can('bp_moderate');
 
 		if (!$can && !empty($args['item'])) {
-			$can = (int) $args['item']['user_id'] === (int) $user_id;
+			// BuddyDrive_Item::remove_from_group() passes the item as an object
+			$item = (array) $args['item'];
+			$can = (int) $item['user_id'] === (int) $user_id;
 		}
 
 		if (!$can && !empty($args['group_id'])) {

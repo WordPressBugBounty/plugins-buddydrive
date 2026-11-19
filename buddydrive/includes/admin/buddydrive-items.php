@@ -992,7 +992,7 @@ class BuddyDrive_List_Table extends WP_List_Table
 		$delete_url = wp_nonce_url($base_url . '&amp;action=delete', 'buddydrive-delete');
 		$edit_url = $base_url . '&amp;action=edit';
 		$download = trailingslashit('file/' . $item['post_name']);
-		$visit_url = buddydrive_get_root_url() . '/' . $download;
+		$visit_url = buddydrive_get_user_buddydrive_url($item['post_author']) . $download;
 
 		// Download
 		if ($item['post_type'] != buddydrive_get_folder_post_type())

@@ -74,7 +74,8 @@ add_action('buddydrive_after_loop', 'buddydrive_reset_post_data', 1);
  */
 function buddydrive_file_downloader()
 {
-	if (bp_displayed_user_id() > 0 && bp_is_current_component('buddydrive') && 'file' == bp_current_action()) {
+	// File and folder links work on any member's BuddyDrive and, with BuddyPress < 12, on the BuddyDrive page.
+	if (bp_is_current_component('buddydrive') && 'file' == bp_current_action()) {
 		$redirect = esc_url(wp_get_referer());
 
 		$buddyfile_name = bp_action_variable(0);
@@ -82,8 +83,19 @@ function buddydrive_file_downloader()
 		$buddydrive_file = buddydrive_get_buddyfile($buddyfile_name);
 
 		if (empty($buddydrive_file)) {
+			// A visitor outside a profile has no BuddyDrive to go back to.
+			if (!bp_displayed_user_id() && !is_user_logged_in()) {
+				bp_do_404();
+				return;
+			}
+
 			bp_core_add_message(__('OOps, we could not find your file.', 'buddydrive'), 'error');
 			bp_core_redirect(buddydrive_get_root_url());
+		}
+
+		// Old links on the BuddyDrive page (BuddyPress < 12) open on the owner's BuddyDrive.
+		if (!bp_displayed_user_id()) {
+			bp_core_redirect($buddydrive_file->link);
 		}
 
 		$buddydrive_file_path = $buddydrive_file->path;
@@ -150,12 +162,21 @@ function buddydrive_file_downloader()
 				die();
 			}
 		}
-	} else if (bp_displayed_user_id() > 0 && bp_is_current_component('buddydrive') && 'folder' == bp_current_action()) {
+	} else if (bp_is_current_component('buddydrive') && 'folder' == bp_current_action()) {
 		$buddyfolder = buddydrive_get_buddyfile(bp_action_variable(0), buddydrive_get_folder_post_type());
 
 		if (empty($buddyfolder)) {
+			if (!bp_displayed_user_id() && !is_user_logged_in()) {
+				bp_do_404();
+				return;
+			}
+
 			bp_core_add_message(__('OOps, we could not find your folder.', 'buddydrive'), 'error');
 			bp_core_redirect(buddydrive_get_root_url());
+		}
+
+		if (!bp_displayed_user_id()) {
+			bp_core_redirect($buddyfolder->link);
 		}
 
 		// in case of the folder, we open it on the user's BuddyDrive or the group one
@@ -183,6 +204,26 @@ function buddydrive_file_downloader()
 		add_action('bp_template_content', 'buddydrive_user_content');
 
 		// This loads the standard BP wrapper like members/single/plugins
+		bp_core_load_template('members/single/plugins');
+	} elseif (bp_is_current_component('buddydrive') && 'edit' === bp_current_action()) {
+		// The app's edit URL (`edit/<id>`): load the app, which opens the edit form. The Ajax endpoints check the rights.
+		$item_id = absint(bp_action_variable(0));
+
+		if (!is_user_logged_in() || !$item_id) {
+			if (!bp_displayed_user_id()) {
+				bp_do_404();
+				return;
+			}
+
+			bp_core_redirect(buddydrive_get_user_buddydrive_url(bp_displayed_user_id()));
+		}
+
+		// Old links on the BuddyDrive page (BuddyPress < 12) open on the user's own BuddyDrive.
+		if (!bp_displayed_user_id()) {
+			bp_core_redirect(buddydrive_get_user_buddydrive_url(bp_loggedin_user_id()) . 'edit/' . $item_id . '/');
+		}
+
+		add_action('bp_template_content', 'buddydrive_user_content');
 		bp_core_load_template('members/single/plugins');
 	}
 }
@@ -215,7 +256,7 @@ function buddydrive_update_children($params, $args, $item)
 add_action('buddydrive_update_item', 'buddydrive_update_children', 1, 3);
 
 /**
- * Removes Buddyfiles, BuddyFolders and files of a deleted user
+ * Removes Buddyfiles, BuddyFolders and files of a deleted or spammed user
  *
  * @param  int $user_id the id of the deleted user
  * @uses buddydrive_delete_item() to remove user's BuddyDrive content
@@ -226,8 +267,51 @@ function buddydrive_remove_user($user_id)
 }
 
 add_action('wpmu_delete_user', 'buddydrive_remove_user', 11, 1);
-add_action('delete_user', 'buddydrive_remove_user', 11, 1);
+add_action('delete_user', 'buddydrive_delete_user', 11, 2);
 add_action('bp_make_spam_user', 'buddydrive_remove_user', 11, 1);
+
+/**
+ * Handles a user deleted with wp_delete_user()
+ *
+ * When the admin attributes the user's content to another user, WordPress
+ * reassigns every post of the deleted user, BuddyDrive items included, right
+ * after this hook. In that case the items are kept: the files stay in the
+ * shared BuddyDrive upload directory and the space they use moves to the
+ * new owner. Otherwise the user's BuddyDrive content is deleted.
+ *
+ * @since 2.1.7
+ *
+ * @param int      $user_id  The ID of the deleted user.
+ * @param int|null $reassign The ID of the user who receives the content, null to delete it.
+ */
+function buddydrive_delete_user($user_id, $reassign = null)
+{
+	$user_id = (int) $user_id;
+	$reassign = (int) $reassign;
+
+	if (empty($reassign) || $reassign === $user_id) {
+		buddydrive_remove_user($user_id);
+		return;
+	}
+
+	global $wpdb;
+
+	// BuddyDrive items live in the posts table of the root blog.
+	$file_guids = $wpdb->get_col($wpdb->prepare("SELECT guid FROM {$wpdb->base_prefix}posts WHERE post_author = %d AND post_type = %s", $user_id, buddydrive_get_file_post_type()));
+
+	$bytes = 0;
+	foreach ($file_guids as $guid) {
+		$path = buddydrive()->upload_dir . '/' . basename($guid);
+
+		if (file_exists($path)) {
+			$bytes += (int) filesize($path);
+		}
+	}
+
+	if ($bytes > 0) {
+		buddydrive_update_user_space($reassign, $bytes);
+	}
+}
 
 /**
  * Hooks the create complete group action to eventually enable BuddyDrive for the group just created

@@ -3,7 +3,7 @@ Contributors: themekraft
 Tags: BuddyPress, files, folders
 Requires at least: 5.9
 Tested up to: 7.1
-Stable tag: 2.1.6
+Stable tag: 2.1.7
 Requires PHP: 7.4
 License: GPLv2
 
@@ -79,6 +79,15 @@ We love hearing your needs, want, desires, and ideas for BuddyPress! Our goal is
 5. BuddyDrive items administration.
 
 == Changelog ==
+
+= 2.1.7 - 18 Nov 2026 =
+* Fix: the BuddyDrive group tab (Pro) did not show with BuddyPress 12 or newer, and it listed every public file of the site instead of the group's files. Members can add files and folders from the group tab again, and "Remove from the group" works again.
+* Fix: files and folders can only be shared with groups that have BuddyDrive enabled and that the user belongs to (site moderators can use any group with BuddyDrive enabled).
+* Fix: when an admin deletes a user and attributes their content to another user, BuddyDrive now keeps the user's files and folders and gives them to that user, instead of deleting them.
+* Fix: visitors following a /buddydrive/ link no longer get an endless redirect. File and folder links now point to the owner's BuddyDrive and are the same for every visitor, and old links redirect there.
+* Fix: Edit did nothing on pages opened from a folder link, and reloading the edit form showed a "page not found" error.
+* Fix: other members' profiles no longer show the New File and New Folder buttons (what was uploaded there went to the uploader's own BuddyDrive). Site moderators only get the Delete action there.
+* Fix: a PHP warning on sites without a BuddyDrive page that use the default page menu.
 
 = 2.1.6 - 13 Nov 2026 =
 * Fix: the BuddyDrive tab in the member profile was empty with classic themes, so files could not be uploaded from it.

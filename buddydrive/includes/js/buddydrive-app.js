@@ -136,7 +136,8 @@ window.buddydrive = window.buddydrive || {};
 		listView: function () {
 			const fragment = Backbone.history.getFragment().replace(/\/+$/, ''); // remove trailing slash
 
-			let scope = 'public';
+			// A group's BuddyDrive tab lists the group's items, member profiles default to public
+			let scope = buddydrive.Settings.group_id ? 'groups' : 'public';
 
 			if (fragment === 'members') {
 				scope = 'members';

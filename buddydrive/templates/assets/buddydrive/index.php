@@ -12,8 +12,8 @@ defined('ABSPATH') || exit;
 $view_url_path = '#view';
 $edit_url_path = '#edit';
 if (!is_admin()) {
-    $view_url_path = '/' . buddydrive_get_path_url() . '/folder';
-    $edit_url_path = '/' . buddydrive_get_path_url() . '/edit';
+    $view_url_path = esc_attr('/' . buddydrive_get_path_url() . '/folder');
+    $edit_url_path = esc_attr('/' . buddydrive_get_path_url() . '/edit');
 }
 ?>
 <div id="buddydrive-main" data-user="<?php echo bp_get_displayed_user_username(); ?>"></div>
@@ -24,7 +24,7 @@ if (!is_admin()) {
 <# if ( data.current ) { #>
     {{{data.text}}}
     <# } else { #>
-        <a href="<?php echo buddydrive_get_root_url(); ?>" data-crumb="{{data.id}}"
+        <a href="<?php echo esc_url(bp_is_group() ? buddydrive_get_group_buddydrive_url() : buddydrive_get_root_url()); ?>" data-crumb="{{data.id}}"
             class="buddydrive-crumb">{{{data.text}}}</a>
         <# } #>
 </script>

@@ -4,7 +4,7 @@
  * Plugin Name: BuddyDrive
  * Plugin URI: https://wordpress.org/plugins/buddydrive/
  * Description: A plugin to share files, the BuddyPress way!
- * Version: 2.1.6
+ * Version: 2.1.7
  * Requires at least: 5.9
  * Requires PHP: 7.4
  * Author: ThemeKraft
@@ -168,7 +168,7 @@ if ( !class_exists( 'BuddyDrive' ) ) {
          */
         private function setup_globals() {
             /** Version */
-            $this->version = '2.1.6';
+            $this->version = '2.1.7';
             $this->db_version = 214;
             /** Paths */
             // Setup some base path and URL information

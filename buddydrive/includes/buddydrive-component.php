@@ -363,7 +363,7 @@ class BuddyDrive_Component extends BP_Component
 	 */
 	public function register_embed_code()
 	{
-		wp_embed_register_handler('buddydrive', '#' . buddydrive_get_root_url() . '\/(.+?)\/(.+?)\/#i', 'wp_embed_handler_buddydrive');
+		wp_embed_register_handler('buddydrive', buddydrive_get_embed_regex(), 'wp_embed_handler_buddydrive');
 	}
 }
 

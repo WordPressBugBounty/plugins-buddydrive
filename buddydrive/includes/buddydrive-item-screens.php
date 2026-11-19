@@ -284,6 +284,13 @@ class BuddyDrive_Screens
 	public function directory_setup()
 	{
 		if (bp_is_current_component('buddydrive') && !bp_displayed_user_id()) {
+			// The BuddyDrive page (BuddyPress < 12) has nothing to show: item links redirect to
+			// their owner's BuddyDrive and members to their own one, so visitors get a 404.
+			if (!is_user_logged_in()) {
+				bp_do_404();
+				return;
+			}
+
 			// This wrapper function sets the $bp->is_directory flag to true, which help other
 			// content to display content properly on your directory.
 			bp_update_is_directory(true, 'buddydrive');

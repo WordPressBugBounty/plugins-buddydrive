@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => 'themekraft/buddydrive',
-        'pretty_version' => '2.1.6',
-        'version' => '2.1.6.0',
-        'reference' => '3328bca0fe0a9a8dd5d5c37b249b202ba2acf9a1',
+        'pretty_version' => '2.1.7',
+        'version' => '2.1.7.0',
+        'reference' => '56187e148bc04b53eba2c7c268eed5c2db9c7ada',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -20,9 +20,9 @@
             'dev_requirement' => false,
         ),
         'themekraft/buddydrive' => array(
-            'pretty_version' => '2.1.6',
-            'version' => '2.1.6.0',
-            'reference' => '3328bca0fe0a9a8dd5d5c37b249b202ba2acf9a1',
+            'pretty_version' => '2.1.7',
+            'version' => '2.1.7.0',
+            'reference' => '56187e148bc04b53eba2c7c268eed5c2db9c7ada',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

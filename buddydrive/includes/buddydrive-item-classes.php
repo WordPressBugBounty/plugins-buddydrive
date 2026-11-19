@@ -367,7 +367,26 @@ class BuddyDrive_Item
 
 					case 'groups':
 						if (bp_is_active('groups')) {
-							if (!empty($r['user_id'])) {
+							// A group's BuddyDrive tab: the items shared with this group
+							if (!empty($r['group_id']) && empty($r['user_id'])) {
+								$group = groups_get_group((int) $r['group_id']);
+
+								if (empty($group->id) || ('public' !== $group->status && !groups_is_user_member(bp_loggedin_user_id(), $group->id) && !bp_current_user_can('bp_moderate'))) {
+									$query_args = array();
+								} else {
+									if (!empty($query_args['author'])) {
+										unset($query_args['author']);
+									}
+
+									$query_args['post_status'] = array('buddydrive_groups');
+									$query_args['meta_query'][] = array(
+										'key' => '_buddydrive_sharing_groups',
+										'value' => (int) $group->id,
+									);
+								}
+
+								// A member's profile: the items shared with the member's groups
+							} elseif (!empty($r['user_id'])) {
 								$user_groups = groups_get_user_groups($r['user_id']);
 								if (!empty($user_groups['groups'])) {
 									if (!empty($query_args['author'])) {

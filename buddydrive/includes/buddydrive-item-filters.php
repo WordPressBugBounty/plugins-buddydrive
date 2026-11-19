@@ -154,10 +154,15 @@ function buddydrive_hide_item( $args ) {
 
 	$directory_pages = bp_core_get_directory_page_ids();
 
+	// Sites without a BuddyDrive directory page have nothing to hide
+	if ( empty( $directory_pages[ $buddydrive_slug ] ) ) {
+		return $args;
+	}
+
 	if ( empty( $args['exclude'] ) ) {
-		$args['exclude'] = $directory_pages[$buddydrive_slug];
+		$args['exclude'] = $directory_pages[ $buddydrive_slug ];
 	} else {
-		$args['exclude'] .= ',' . $directory_pages[$buddydrive_slug];
+		$args['exclude'] .= ',' . $directory_pages[ $buddydrive_slug ];
 	}
 
 	return $args;

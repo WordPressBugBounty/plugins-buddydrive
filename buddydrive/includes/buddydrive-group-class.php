@@ -214,16 +214,33 @@ if (class_exists('BP_Group_Extension')):
 		}
 
 		/**
+		 * Decides whether to show the tab once the current group is known
+		 *
+		 * BuddyPress 10+ builds group extensions on `bp_init`, and BuddyPress 12+
+		 * only knows the current group after parsing the request, so the value
+		 * computed in the constructor is always false there. `_register()` runs
+		 * on `bp_actions` (and `admin_init`), when the group is set.
+		 *
+		 * @since 2.1.7
+		 */
+		public function _register()
+		{
+			$this->params['enable_nav_item'] = $this->enable_nav_item();
+
+			parent::_register();
+		}
+
+		/**
 		 * Loads the BuddyDrive navigation if group admin activated BuddyDrive
 		 *
-		 * @uses bp_get_current_group_id() to get the group id
+		 * @uses BP_Group_Extension::get_group_id() to get the group id
 		 * @uses groups_get_groupmeta() to get the BuddyDrive option
 		 * @return boolean true or false
 		 */
 		public function enable_nav_item()
 		{
 			$retval = false;
-			$group_id = bp_get_current_group_id();
+			$group_id = $this->get_group_id();
 
 			if (empty($group_id)) {
 				return $retval;

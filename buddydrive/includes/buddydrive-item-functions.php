@@ -82,6 +82,7 @@ function buddydrive_localize_ui()
 
 	$l10n_array['settings'] = array(
 		'buddydrive_scope' => buddydrive_get_current_scope(),
+		'group_id' => bp_is_group() ? (int) bp_get_current_group_id() : 0,
 		'privacy_filters' => $privacy_filters,
 		'loop_filters' => array(
 			'modified' => array(
@@ -119,7 +120,12 @@ function buddydrive_localize_ui()
 		'saveEdits' => __('Saving your changes, please wait.', 'buddydrive'),
 	);
 
-	if (buddydrive_current_user_can('buddydrive_upload')) {
+	$can_upload = buddydrive_current_user_can('buddydrive_upload');
+
+	// Moderators on another member's BuddyDrive only get Delete: what they upload would go to their own one
+	$moderates_profile = !$can_upload && bp_displayed_user_id() && bp_current_user_can('bp_moderate');
+
+	if ($can_upload || $moderates_profile) {
 		$l10n_array['settings']['manage_toolbar'] = array(
 			'new_file' => array(
 				'id' => 'new_file',
@@ -169,6 +175,10 @@ function buddydrive_localize_ui()
 
 		$l10n_array['strings']['new_folder_name'] = __('Name of your folder', 'buddydrive');
 		$l10n_array['strings']['new_folder_button'] = __('Create folder', 'buddydrive');
+
+		if ($moderates_profile) {
+			$l10n_array['settings']['manage_toolbar'] = array_intersect_key($l10n_array['settings']['manage_toolbar'], array('bulk' => true));
+		}
 	}
 
 	return apply_filters('buddydrive_localize_ui', $l10n_array);
@@ -797,9 +807,10 @@ function buddydrive_update_item($args = '', $item = false)
  *
  * Only the fields the edit UI edits are kept. Ownership, type, MIME type, guid and
  * status always come from the stored item. A new parent folder must be one the
- * current user can put items in.
+ * current user can put items in, and new groups ones they can share items with.
  *
  * @since 2.1.5
+ * @since 2.1.7 Checks the groups the item is not shared with yet.
  *
  * @param array  $request The edit request (slashed, as in $_POST).
  * @param object $item    The BuddyDrive item being edited.
@@ -835,6 +846,15 @@ function buddydrive_get_item_edit_args($request = array(), $item = null)
 	foreach (array('groups', 'members') as $field) {
 		if (isset($args[$field])) {
 			$args[$field] = wp_parse_id_list($args[$field]);
+		}
+	}
+
+	// Groups the item is not shared with yet must be groups the user can share items with
+	if (!empty($args['groups'])) {
+		$new_groups = array_diff($args['groups'], wp_parse_id_list(get_post_meta($item->ID, '_buddydrive_sharing_groups')));
+
+		if ($new_groups && array_diff($new_groups, buddydrive_get_shareable_groups($new_groups))) {
+			return new WP_Error('not_allowed', __('You are not allowed to share files with this group.', 'buddydrive'));
 		}
 	}
 
@@ -1010,7 +1030,7 @@ add_action('groups_before_delete_group', 'buddydrive_remove_buddyfiles_from_grou
  * @param string $type the BuddyDrive post type
  * @uses buddydrive_get_file_post_type() to default to the BuddyFile post type
  * @uses BuddyDrive_Item::get() to get the BuddyDrive item
- * @uses buddydrive_get_root_url() to get BuddyDrive root url
+ * @uses buddydrive_get_user_buddydrive_url() to build the item link from its owner's BuddyDrive
  * @uses get_post_meta() to get item's privacy options
  * @return object the BuddyDrive item
  */
@@ -1060,7 +1080,8 @@ function buddydrive_get_buddyfile($name = false, $type = false)
 	}
 
 	$slug = trailingslashit($buddyitem_slug . '/' . $buddyfile->post_name);
-	$link = buddydrive_get_root_url() . '/' . $slug;
+	// Links point to the owner's BuddyDrive so they are the same for every viewer.
+	$link = buddydrive_get_user_buddydrive_url($buddyfile->user_id) . $slug;
 	$buddyfile->link = $link;
 
 	/* privacy */
@@ -1479,6 +1500,44 @@ function buddydrive_current_group_is_enabled()
 	}
 
 	return (bool) apply_filters('buddydrive_current_group_is_enabled', groups_get_groupmeta(bp_get_current_group_id(), '_buddydrive_enabled'));
+}
+
+/**
+ * Keeps the groups a user can share BuddyDrive items with
+ *
+ * Groups with BuddyDrive enabled the user is a member of, or any group with
+ * BuddyDrive enabled for moderators.
+ *
+ * @since 2.1.7
+ *
+ * @param array|string $group_ids The requested group IDs.
+ * @param int          $user_id   The user sharing the items. Defaults to the logged in user.
+ * @return array The group IDs the user can share items with.
+ */
+function buddydrive_get_shareable_groups($group_ids = array(), $user_id = 0)
+{
+	if (!bp_is_active('groups')) {
+		return array();
+	}
+
+	if (empty($user_id)) {
+		$user_id = bp_loggedin_user_id();
+	}
+
+	$is_moderator = bp_current_user_can('bp_moderate');
+	$shareable = array();
+
+	foreach (wp_parse_id_list($group_ids) as $group_id) {
+		if (!$group_id || !groups_get_groupmeta($group_id, '_buddydrive_enabled')) {
+			continue;
+		}
+
+		if ($is_moderator || groups_is_user_member($user_id, $group_id)) {
+			$shareable[] = $group_id;
+		}
+	}
+
+	return $shareable;
 }
 
 /**

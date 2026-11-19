@@ -502,18 +502,14 @@ window.buddydrive = window.buddydrive || {};
 		initialize: function () {
 
 			var isFolder = buddydrive.App.Query.get('buddydrive_parent'),
-				isMembersScope = buddydrive.Settings.buddydrive_scope === 'members',
-				isGroupsScope = buddydrive.Settings.buddydrive_scope === 'groups',
-				isFriendsScope = buddydrive.Settings.buddydrive_scope === 'friends';
+				isGroupTab = !!buddydrive.Settings.group_id,
+				// Items shared with the member: nothing to create there (a group's own tab is not one of them)
+				isSharedScope = -1 !== _.indexOf(['members', 'friends', 'groups'], buddydrive.Settings.buddydrive_scope) && !isGroupTab;
 
 			_.each(buddydrive.Settings.manage_toolbar, function (action) {
-
-				console.log('manageBar action: ' + action.id);
-
 				// Do not display the Add folder button if browsing a folder
 				if (
-					(!isFolder && !isMembersScope && !isFriendsScope && !isGroupsScope) ||
-					(isFolder && action.id !== 'new_folder' && !isMembersScope && !isFriendsScope && !isGroupsScope) ||
+					(!isSharedScope && (!isFolder || action.id !== 'new_folder')) ||
 					action.id === 'stats' ||
 					action.id === 'bulk'
 				) {
@@ -537,7 +533,8 @@ window.buddydrive = window.buddydrive || {};
 			var subViews = [];
 			this._views = {};
 
-			if (!_.isUndefined(buddydrive.Uploader)) {
+			// Moderators on another member's BuddyDrive get a toolbar (Delete) without the uploader
+			if (!_.isUndefined(buddydrive.Uploader) || !_.isEmpty(buddydrive.Settings.manage_toolbar)) {
 				subViews.push(new buddydrive.Views.manageBar({ collection: this.options.actions }));
 			}
 
