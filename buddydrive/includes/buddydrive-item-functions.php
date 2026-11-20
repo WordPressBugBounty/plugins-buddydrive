@@ -1239,9 +1239,8 @@ function wp_embed_handler_buddydrive($matches, $attr, $url, $rawattr)
 		return;
 	}
 
-	// Items restricted to groups: no preview for users who cannot open them, only the link.
-	$access_item = !empty($item->post_parent) ? buddydrive_get_buddyfile($item->post_parent, buddydrive_get_folder_post_type()) : $item;
-	if (!empty($access_item->check_for) && 'groups' === $access_item->check_for && !buddydrive_user_can_access_group_item($access_item)) {
+	// Only users who can download the item (or open the folder) see its preview, the others only get the link.
+	if (!buddydrive_user_can_view_item($item)) {
 		if (is_multisite() && (int) $current_blog !== (int) bp_get_root_blog_id()) {
 			restore_current_blog();
 		}
@@ -1603,6 +1602,43 @@ function buddydrive_user_can_access_group_item($item = null, $user_id = null)
 }
 
 /**
+ * Checks whether a user can see the title and description of an item
+ *
+ * Same rules as the download: files inside a folder follow the folder, password
+ * protected items are only shown to their owner.
+ *
+ * @since 2.1.9
+ *
+ * @param object $item    The BuddyDrive item, as returned by buddydrive_get_buddyfile().
+ * @param int    $user_id The user ID. Defaults to the logged in user.
+ * @return bool True if the user can see the item, false otherwise.
+ */
+function buddydrive_user_can_view_item($item = null, $user_id = null)
+{
+	if (null === $user_id) {
+		$user_id = bp_loggedin_user_id();
+	}
+
+	$access_item = $item;
+	if (!empty($item->post_parent)) {
+		$access_item = buddydrive_get_buddyfile($item->post_parent, buddydrive_get_folder_post_type());
+	}
+
+	$can_view = !empty($access_item) && true === buddydrive_check_download($access_item, (int) $user_id);
+
+	/**
+	 * Filters whether a user can see the title and description of an item
+	 *
+	 * @since 2.1.9
+	 *
+	 * @param bool   $can_view True if the user can see the item, false otherwise.
+	 * @param object $item     The BuddyDrive item.
+	 * @param int    $user_id  The user ID.
+	 */
+	return (bool) apply_filters('buddydrive_user_can_view_item', $can_view, $item, (int) $user_id);
+}
+
+/**
  * Check if an item can be accessed by the requested user ID
  *
  * @since  2.0.0
@@ -1917,6 +1953,11 @@ function buddydrive_list_objects($args = array())
 
 		// Add the buddydrive_type attribute
 		foreach ($folders as $f => $folder) {
+			// Only the folders the user can put items in, the ones the edit form accepts.
+			if (!buddydrive_current_user_can('buddydrive_add_to_folder', array('folder' => buddydrive_get_buddyfile($folder)))) {
+				continue;
+			}
+
 			$object = (object) $folder;
 			$object->buddydrive_type = 'folder';
 			$objects[] = $object;

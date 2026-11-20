@@ -3,7 +3,7 @@ Contributors: themekraft
 Tags: BuddyPress, files, folders
 Requires at least: 5.9
 Tested up to: 7.1
-Stable tag: 2.1.8
+Stable tag: 2.1.9
 Requires PHP: 7.4
 License: GPLv2
 
@@ -79,6 +79,12 @@ We love hearing your needs, want, desires, and ideas for BuddyPress! Our goal is
 5. BuddyDrive items administration.
 
 == Changelog ==
+
+= 2.1.9 - 20 Nov 2026 =
+* Security: embeds of BuddyDrive files and folders now check that the viewer can open the item; other viewers only see the link.
+* Security: bulk actions of group admins now check that the items are shared with their group.
+* Security: the folder search of the edit form now only lists the folders you can add items to.
+* Security: searching another member's files now matches password protected items by their title only.
 
 = 2.1.8 - 19 Nov 2026 =
 * Security: files and folders restricted to a group can now only be downloaded, opened or previewed by members of that group, the file owner and site administrators, also in public groups. Before, anyone who could see a public group, including logged-out visitors, could download them. If you relied on that, set those items to Public instead.

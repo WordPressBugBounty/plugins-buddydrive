@@ -1337,8 +1337,11 @@ function buddydrive_current_user_can($capability = 'buddydrive_upload', $args = 
 			}
 		}
 
-		if ('buddydrive_bulk_edit' === $capability && !$can && bp_is_group()) {
-			$can = (bool) groups_is_user_admin($user_id, bp_get_current_group_id());
+		// Group admins manage the items shared with their group.
+		if ('buddydrive_bulk_edit' === $capability && !$can && bp_is_group() && !empty($args['item'])) {
+			$item = (array) $args['item'];
+			$group_id = (int) bp_get_current_group_id();
+			$can = !empty($item['group']) && in_array($group_id, wp_parse_id_list($item['group']), true) && groups_is_user_admin($user_id, $group_id);
 		}
 	} elseif ('buddydrive_remove_group' === $capability) {
 		$can = bp_current_user_can('bp_moderate');

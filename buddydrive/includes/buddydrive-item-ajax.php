@@ -189,7 +189,9 @@ function buddydrive_fetch_items()
 	$user_id = bp_loggedin_user_id();
 	$is_moderator = bp_current_user_can('bp_moderate');
 
-	$items = array_filter((array) $buddydrive_items->query->posts, function ($item) use ($user_id, $is_moderator) {
+	$search_terms = !empty($query_args['search']) && is_string($query_args['search']) ? preg_split('/\s+/', trim(wp_unslash($query_args['search']))) : array();
+
+	$items = array_filter((array) $buddydrive_items->query->posts, function ($item) use ($user_id, $is_moderator, $search_terms) {
 		if ((int) $item->post_author === (int) $user_id) {
 			return true;
 		}
@@ -204,7 +206,22 @@ function buddydrive_fetch_items()
 
 		$can_list = buddydrive_check_download(buddydrive_get_buddyfile($item), $user_id);
 
-		return !is_wp_error($can_list) || 'empty_password' === $can_list->get_error_code();
+		if (!is_wp_error($can_list)) {
+			return true;
+		}
+
+		if ('empty_password' !== $can_list->get_error_code()) {
+			return false;
+		}
+
+		// Password protected items are listed by their title: a search only matches their title.
+		foreach ($search_terms as $term) {
+			if ('' !== $term && '-' !== $term[0] && false === stripos($item->post_title, $term)) {
+				return false;
+			}
+		}
+
+		return true;
 	});
 
 	$items = array_values(array_map('buddydrive_prepare_for_js', $items));
