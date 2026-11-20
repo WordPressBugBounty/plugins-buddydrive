@@ -14,6 +14,34 @@ defined('ABSPATH') || exit;
 class BuddyDrive_Screens
 {
 	/**
+	 * The template to load.
+	 *
+	 * @var string
+	 */
+	public $template = '';
+
+	/**
+	 * The current screen.
+	 *
+	 * @var string
+	 */
+	public $current_screen = '';
+
+	/**
+	 * Whether the current theme is BP Default or a child theme of it.
+	 *
+	 * @var bool
+	 */
+	public $is_bp_default = false;
+
+	/**
+	 * Path to the component templates.
+	 *
+	 * @var string
+	 */
+	public $template_dir = '';
+
+	/**
 	 * The constructor
 	 *
 	 * @package BuddyDrive Component

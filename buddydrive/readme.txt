@@ -3,7 +3,7 @@ Contributors: themekraft
 Tags: BuddyPress, files, folders
 Requires at least: 5.9
 Tested up to: 7.1
-Stable tag: 2.1.7
+Stable tag: 2.1.8
 Requires PHP: 7.4
 License: GPLv2
 
@@ -79,6 +79,13 @@ We love hearing your needs, want, desires, and ideas for BuddyPress! Our goal is
 5. BuddyDrive items administration.
 
 == Changelog ==
+
+= 2.1.8 - 19 Nov 2026 =
+* Security: files and folders restricted to a group can now only be downloaded, opened or previewed by members of that group, the file owner and site administrators, also in public groups. Before, anyone who could see a public group, including logged-out visitors, could download them. If you relied on that, set those items to Public instead.
+* Fix: on BuddyPress 12 or newer, the BuddyDrive WordPress page no longer shows placeholder text or appears in block theme navigation, and /buddydrive/ sends members to their own BuddyDrive.
+* Fix: PHP 8.2+ deprecation notices written to the debug log on every page, and notices about BuddyPress functions deprecated in BuddyPress 12.
+* Fix: the search field placeholder of the file list can now be translated.
+* New: CSS classes on the BuddyDrive embeds in the activity stream, so themes can style them.
 
 = 2.1.7 - 18 Nov 2026 =
 * Fix: the BuddyDrive group tab (Pro) did not show with BuddyPress 12 or newer, and it listed every public file of the site instead of the group's files. Members can add files and folders from the group tab again, and "Remove from the group" works again.

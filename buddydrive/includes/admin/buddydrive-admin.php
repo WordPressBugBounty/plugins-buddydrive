@@ -60,6 +60,21 @@ if (!class_exists('BuddyDrive_Admin')):
 		 */
 		public $hook_suffixes = array();
 
+		/**
+		 * @var bool whether the database needs an upgrade
+		 */
+		public $requires_db_upgrade = false;
+
+		/**
+		 * @var string the URL of the BuddyDrive admin page
+		 */
+		public $buddydrive_page = '';
+
+		/**
+		 * @var callable the callback of the BuddyDrive items admin screen
+		 */
+		public $items_admin_callback;
+
 		/** Functions */
 
 		/**
@@ -779,7 +794,8 @@ body.rtl .about-wrap .buddydrive-badge {
 		} else {
 			foreach ($tasks as $key => $task) {
 				if (!empty($task['count']) && 'upgrade_db_version' !== $task['action_id']) {
-					$tasks[$key]['count'] = $wpdb->get_var($wpdb->prepare($task['count']));
+					// The count query is already prepared by buddydrive_get_upgrade_tasks().
+					$tasks[$key]['count'] = $wpdb->get_var($task['count']);
 
 					// If nothing needs to be ugraded, remove the task.
 					if (empty($tasks[$key]['count'])) {

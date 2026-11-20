@@ -122,7 +122,7 @@ if (class_exists('BP_Group_Extension')):
 		 * @uses is_admin() to check if we're in WP backend
 		 * @uses bp_core_add_message() to inform about success / error
 		 * @uses bp_core_redirect() to avoid some refreshing stuff
-		 * @uses bp_get_group_permalink() to redirect to
+		 * @uses buddydrive_get_group_url() to redirect to
 		 */
 		public function edit_screen_save($group_id = null)
 		{
@@ -152,7 +152,7 @@ if (class_exists('BP_Group_Extension')):
 				else
 					bp_core_add_message(__('Settings saved successfully', 'buddydrive'));
 
-				bp_core_redirect(bp_get_group_permalink(buddypress()->groups->current_group) . 'admin/' . $this->slug);
+				bp_core_redirect(buddydrive_get_group_url(buddypress()->groups->current_group) . 'admin/' . $this->slug);
 			}
 		}
 
@@ -191,7 +191,7 @@ if (class_exists('BP_Group_Extension')):
 		{
 			$current_group = groups_get_current_group();
 
-			if (('public' !== $this->visibility || 'public' !== $current_group->status) && !groups_is_user_member(bp_loggedin_user_id(), $current_group->id) && !bp_current_user_can('bp_moderate')) {
+			if (!groups_is_user_member(bp_loggedin_user_id(), $current_group->id) && !bp_current_user_can('bp_moderate')) {
 				printf('<div id="message" class="info"><p>%s</p></div>', esc_html__('You must be a member of this group to view the files.', 'buddydrive'));
 				return;
 			}

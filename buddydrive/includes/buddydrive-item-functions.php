@@ -110,6 +110,7 @@ function buddydrive_localize_ui()
 		'privacyFilterLabel' => __('Select your privacy preferences.', 'buddydrive'),
 		'passwordInputLabel' => __('Define your password.', 'buddydrive'),
 		'loopFilterLabel' => __('Order items by:', 'buddydrive'),
+		'searchPlaceholder' => _x('Search', 'search field placeholder', 'buddydrive'),
 		'editErrors' => array(
 			'title' => __('Please make sure to provide a name for your file or folder.', 'buddydrive'),
 			'groups' => __('Please make sure to select a group using the autocomplete field.', 'buddydrive'),
@@ -244,7 +245,7 @@ function buddydrive_user_buddydrive_url($linkonly = false)
  * @param  integer $user_id the id of the user
  * @uses bp_displayed_user_id() to get the displayed user id
  * @uses bp_loggedin_user_id() to get the current user id
- * @uses bp_core_get_user_domain to get the user's home page link
+ * @uses buddydrive_get_user_url() to get the user's home page link
  * @uses buddydrive_get_slug() to get the slug of BuddyDrive
  * @return string $buddydrive_link the link to user's BuddyDrive
  */
@@ -255,7 +256,7 @@ function buddydrive_get_user_buddydrive_url($user_id = 0)
 		$user_id = !empty($displayed_user_id) ? $displayed_user_id : bp_loggedin_user_id();
 	}
 
-	$user_domain = bp_core_get_user_domain($user_id);
+	$user_domain = buddydrive_get_user_url($user_id);
 
 	$buddydrive_link = trailingslashit($user_domain . buddydrive_get_slug());
 
@@ -297,7 +298,7 @@ function buddydrive_get_group_buddydrive_url($group_id = 0, $user_id = 0)
 	}
 
 	if (!empty($group)) {
-		$group_link = bp_get_group_permalink($group);
+		$group_link = buddydrive_get_group_url($group);
 
 		$buddydrive_link = trailingslashit($group_link . buddydrive_get_slug());
 	}
@@ -310,7 +311,7 @@ function buddydrive_get_group_buddydrive_url($group_id = 0, $user_id = 0)
  *
  * @param  integer $user_id the id of the user
  * @uses bp_displayed_user_id() to get displayed user id
- * @uses bp_core_get_user_domain() to get the user's home page url
+ * @uses buddydrive_get_user_url() to get the user's home page url
  * @uses buddydrive_get_slug() to get BuddyDrive slug
  * @uses buddydrive_get_friends_subnav_slug() to get BuddyDrive's friends subnav
  * @return string  $buddydrive_friends the url to the shared by friends BuddyDrive
@@ -321,7 +322,7 @@ function buddydrive_get_friends_buddydrive_url($user_id = 0)
 		$user_id = bp_displayed_user_id();
 	}
 
-	$user_domain = bp_core_get_user_domain($user_id);
+	$user_domain = buddydrive_get_user_url($user_id);
 	$buddydrive_link = trailingslashit($user_domain . buddydrive_get_slug());
 	$buddydrive_friends = trailingslashit($buddydrive_link . buddydrive_get_friends_subnav_slug());
 
@@ -1238,16 +1239,26 @@ function wp_embed_handler_buddydrive($matches, $attr, $url, $rawattr)
 		return;
 	}
 
+	// Items restricted to groups: no preview for users who cannot open them, only the link.
+	$access_item = !empty($item->post_parent) ? buddydrive_get_buddyfile($item->post_parent, buddydrive_get_folder_post_type()) : $item;
+	if (!empty($access_item->check_for) && 'groups' === $access_item->check_for && !buddydrive_user_can_access_group_item($access_item)) {
+		if (is_multisite() && (int) $current_blog !== (int) bp_get_root_blog_id()) {
+			restore_current_blog();
+		}
+
+		return sprintf('<a href="%1$s">%2$s</a>', esc_url($url), esc_html($url));
+	}
+
 	$icon = buddydrive_get_icon($filename, $item->check_for, $item->ID);
 
 	if (!empty($item->content)) {
 		$content = sprintf('<p class="description">%s</p>', $item->content);
 	}
 
-	$embed = sprintf('<div style="padding: 5px; display:table">
-			<div style="width: 150px; display:table-cell"><a href="%1$s" title="%2$s"><img src="%3$s" style="max-width: 150px; margin: 0 auto"></a></div>
-			<div style="vertical-align: middle; display:table-cell; padding-left: 10px">
-				<h6><a href="%1$s" title="%2$s">%4$s</a></h6>
+	$embed = sprintf('<div class="buddydrive-embed" style="padding: 5px; display:table">
+			<div class="buddydrive-embed-icon" style="width: 150px; display:table-cell"><a href="%1$s" title="%2$s"><img class="buddydrive-embed-image" src="%3$s" style="max-width: 150px; margin: 0 auto"></a></div>
+			<div class="buddydrive-embed-content" style="vertical-align: middle; display:table-cell; padding-left: 10px">
+				<h6 class="buddydrive-embed-title"><a href="%1$s" title="%2$s">%4$s</a></h6>
 				%5$s
 			</div>
 		</div>',
@@ -1541,6 +1552,57 @@ function buddydrive_get_shareable_groups($group_ids = array(), $user_id = 0)
 }
 
 /**
+ * Checks whether a user can access an item restricted to groups
+ *
+ * The owner of the item, site moderators and the members of at least one of
+ * the item's groups can open or download it, whatever the status of the group
+ * (public, private or hidden).
+ *
+ * @since 2.1.8
+ *
+ * @param object $item    The BuddyDrive item, with its `user_id` and `group` properties.
+ * @param int    $user_id The user wishing to access the item. Defaults to the logged in user.
+ * @return bool True if the user can access the item, false otherwise.
+ */
+function buddydrive_user_can_access_group_item($item = null, $user_id = null)
+{
+	if (empty($item) || !bp_is_active('groups')) {
+		return false;
+	}
+
+	if (null === $user_id) {
+		$user_id = bp_loggedin_user_id();
+	}
+
+	$user_id = (int) $user_id;
+	$can_access = false;
+
+	if ($user_id) {
+		$can_access = (int) $item->user_id === $user_id || bp_user_can($user_id, 'bp_moderate');
+
+		if (!$can_access && !empty($item->group)) {
+			foreach (wp_parse_id_list($item->group) as $group_id) {
+				if (groups_is_user_member($user_id, $group_id)) {
+					$can_access = true;
+					break;
+				}
+			}
+		}
+	}
+
+	/**
+	 * Filters whether a user can access an item restricted to groups
+	 *
+	 * @since 2.1.8
+	 *
+	 * @param bool   $can_access True if the user can access the item, false otherwise.
+	 * @param object $item       The BuddyDrive item.
+	 * @param int    $user_id    The user ID.
+	 */
+	return (bool) apply_filters('buddydrive_user_can_access_group_item', $can_access, $item, $user_id);
+}
+
+/**
  * Check if an item can be accessed by the requested user ID
  *
  * @since  2.0.0
@@ -1604,25 +1666,14 @@ function buddydrive_check_download($file = null, $user_id = 0)
 				$groups = groups_get_groups(array('include' => $file->group, 'show_hidden' => true, 'per_page' => false));
 
 				if (!empty($groups['groups'])) {
-					$group_stati = array_unique(wp_list_pluck($groups['groups'], 'status'));
-					if (!array_diff(array('public'), $group_stati)) {
-						$can_download = true;
-
-						// Check the the user is at least member of one of the group
-					} else {
-						foreach ($groups['groups'] as $group) {
-							if (groups_is_user_member($user_id, $group->id)) {
-								$can_download = true;
-								break;
-							}
-						}
-					}
+					// Members of one of the groups only, also in public groups.
+					$can_download = buddydrive_user_can_access_group_item($file, $user_id);
 
 					if (!$can_download) {
 						if (1 === count($groups['groups']) && 'hidden' !== $groups['groups'][0]->status) {
-							$redirect = bp_get_group_permalink($groups['groups'][0]);
+							$redirect = buddydrive_get_group_url($groups['groups'][0]);
 						} else {
-							$redirect = bp_get_groups_directory_permalink();
+							$redirect = buddydrive_get_groups_directory_url();
 						}
 
 						$can_download = new WP_Error('not_in_groups', __('You must be a member of the group to download the file', 'buddydrive'), $redirect);
@@ -1928,10 +1979,10 @@ function buddydrive_prepare_bpobject_js($object)
 
 		// could use is_a( 'BP_Groups_Group' ) ?
 		if ('group' === $object->buddydrive_type) {
-			$link = bp_get_group_permalink($object);
+			$link = buddydrive_get_group_url($object);
 		} else {
 			// ID or id ?
-			$link = bp_core_get_user_domain($object->id);
+			$link = buddydrive_get_user_url($object->id);
 		}
 
 		if ('user' === $object->buddydrive_type) {

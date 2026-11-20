@@ -116,7 +116,7 @@ function buddydrive_filter_user_space_left( $output, $quota ) {
  * @param  string $recipients the message recipients
  * @uses   friends_get_friend_user_ids() to get the friends list
  * @uses   bp_loggedin_user_id() to get the current logged in user
- * @uses   bp_core_get_username() to get the usernames of the friends.
+ * @uses   buddydrive_get_user_slug() to get the usernames of the friends.
  * @return string list of the usernames of the friends of the loggedin users
  */
 function buddydrive_add_friend_to_recipients( $recipients ) {
@@ -129,7 +129,7 @@ function buddydrive_add_friend_to_recipients( $recipients ) {
 	$usernames = false;
 
 	foreach ( $ids as $id ) {
-		$usernames[] = bp_core_get_username( $id );
+		$usernames[] = buddydrive_get_user_slug( $id );
 	}
 
 	if ( is_array( $usernames ) )
@@ -144,30 +144,77 @@ function buddydrive_add_friend_to_recipients( $recipients ) {
  * removes the BuddyDrive directory page from wp header menu
  *
  * @param  array $args the menu args
- * @uses   buddydrive_get_slug() to get the slug of the BuddyDrive directory page
- * @uses   bp_core_get_directory_page_ids() to get an array of BP Components page ids
+ * @uses   buddydrive_get_directory_page_id() to get the BuddyDrive directory page id
  * @return args  $args with a new arg to exclude BuddyDrive page.
  */
 function buddydrive_hide_item( $args ) {
 
-	$buddydrive_slug = buddydrive()->buddydrive_slug;
-
-	$directory_pages = bp_core_get_directory_page_ids();
+	$page_id = buddydrive_get_directory_page_id();
 
 	// Sites without a BuddyDrive directory page have nothing to hide
-	if ( empty( $directory_pages[ $buddydrive_slug ] ) ) {
+	if ( ! $page_id ) {
 		return $args;
 	}
 
 	if ( empty( $args['exclude'] ) ) {
-		$args['exclude'] = $directory_pages[ $buddydrive_slug ];
+		$args['exclude'] = $page_id;
 	} else {
-		$args['exclude'] .= ',' . $directory_pages[ $buddydrive_slug ];
+		$args['exclude'] .= ',' . $page_id;
 	}
 
 	return $args;
 }
 add_filter( 'wp_page_menu_args', 'buddydrive_hide_item', 20, 1 );
+
+/**
+ * Removes the BuddyDrive page from the page lists of the front end
+ *
+ * Covers the Page List block (used by block themes' navigation fallback),
+ * wp_list_pages() and the Pages widget. The page itself is kept: it only
+ * holds the BuddyDrive slug.
+ *
+ * @since 2.1.8
+ *
+ * @param  WP_Post[] $pages the pages get_pages() found
+ * @return WP_Post[] the pages without the BuddyDrive one.
+ */
+function buddydrive_hide_page_from_page_lists( $pages ) {
+	// The page lives on the BuddyPress root site only.
+	if ( is_admin() || empty( $pages ) || ! is_array( $pages ) || ! bp_is_root_blog() ) {
+		return $pages;
+	}
+
+	$page_id = buddydrive_get_directory_page_id();
+
+	if ( ! $page_id ) {
+		return $pages;
+	}
+
+	return array_values( array_filter( $pages, function ( $page ) use ( $page_id ) {
+		return ! isset( $page->ID ) || $page_id !== (int) $page->ID;
+	} ) );
+}
+add_filter( 'get_pages', 'buddydrive_hide_page_from_page_lists', 10, 1 );
+
+/**
+ * Keeps the BuddyDrive page out of the pages sitemap
+ *
+ * @since 2.1.8
+ *
+ * @param  array  $args      the WP_Query arguments of the sitemap
+ * @param  string $post_type the post type of the sitemap
+ * @return array  the arguments, excluding the BuddyDrive page.
+ */
+function buddydrive_hide_page_from_sitemap( $args, $post_type ) {
+	$page_id = 'page' === $post_type && bp_is_root_blog() ? buddydrive_get_directory_page_id() : 0;
+
+	if ( $page_id ) {
+		$args['post__not_in'] = array_merge( isset( $args['post__not_in'] ) ? (array) $args['post__not_in'] : array(), array( $page_id ) );
+	}
+
+	return $args;
+}
+add_filter( 'wp_sitemaps_posts_query_args', 'buddydrive_hide_page_from_sitemap', 10, 2 );
 
 /**
  * Prevent BuddyDrive directory page from showing in the Pages meta box of the Menu Administration screen.

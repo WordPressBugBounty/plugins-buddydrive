@@ -332,6 +332,82 @@ function buddydrive_get_root_url()
 }
 
 /**
+ * Gets the URL of a member's profile
+ *
+ * bp_core_get_user_domain() is deprecated since BuddyPress 12.0 and only
+ * loaded while BuddyPress still ships its deprecated functions.
+ *
+ * @since 2.1.8
+ *
+ * @param int $user_id the user ID
+ * @return string the URL of the member's profile
+ */
+function buddydrive_get_user_url($user_id = 0)
+{
+	if (function_exists('bp_members_get_user_url')) {
+		return bp_members_get_user_url($user_id);
+	}
+
+	return bp_core_get_user_domain($user_id);
+}
+
+/**
+ * Gets the URL of a group
+ *
+ * bp_get_group_permalink() is deprecated since BuddyPress 12.0.
+ *
+ * @since 2.1.8
+ *
+ * @param BP_Groups_Group|int|false $group the group, the current one if false
+ * @return string the URL of the group
+ */
+function buddydrive_get_group_url($group = false)
+{
+	if (function_exists('bp_get_group_url')) {
+		return bp_get_group_url($group);
+	}
+
+	return bp_get_group_permalink($group);
+}
+
+/**
+ * Gets the URL of the groups directory
+ *
+ * bp_get_groups_directory_permalink() is deprecated since BuddyPress 12.0.
+ *
+ * @since 2.1.8
+ *
+ * @return string the URL of the groups directory
+ */
+function buddydrive_get_groups_directory_url()
+{
+	if (function_exists('bp_get_groups_directory_url')) {
+		return bp_get_groups_directory_url();
+	}
+
+	return bp_get_groups_directory_permalink();
+}
+
+/**
+ * Gets the username BuddyPress uses in a member's profile URL
+ *
+ * bp_core_get_username() is deprecated since BuddyPress 12.0.
+ *
+ * @since 2.1.8
+ *
+ * @param int $user_id the user ID
+ * @return string the username
+ */
+function buddydrive_get_user_slug($user_id = 0)
+{
+	if (function_exists('bp_members_get_user_slug')) {
+		return bp_members_get_user_slug($user_id);
+	}
+
+	return bp_core_get_username($user_id);
+}
+
+/**
  * Gets the path of the BuddyDrive section the app is displayed in
  *
  * The app's folder and edit links are built from it. A page opened from a
@@ -419,7 +495,8 @@ function buddydrive_activation()
 			'post_content' => $buddydrive_page_content,
 			'post_name' => $buddydrive_slug,
 			'post_status' => 'publish',
-			'post_type' => 'page'
+			// BuddyPress 12+ keeps its directory pages in its own post type, out of page lists and menus.
+			'post_type' => function_exists('bp_core_get_directory_post_type') ? bp_core_get_directory_post_type() : 'page'
 		));
 
 		$directory_pages[$buddydrive_slug] = $buddydrive_page_id;
@@ -648,7 +725,11 @@ function buddydrive_maybe_redirect_oldlink()
 	// BuddyPress < 12 serves the root BuddyDrive page itself, which has no content of its own.
 	$is_root_page = bp_is_current_component('buddydrive') && !bp_displayed_user_id() && !bp_current_action();
 
-	if (!is_404() && !$is_root_page)
+	// BuddyPress 12+ leaves a BuddyDrive page of the `page` post type to WordPress, which shows its placeholder text.
+	$page_id = buddydrive_get_directory_page_id();
+	$is_wp_page = !$is_root_page && $page_id && buddydrive_bp_uses_rewrites() && is_singular() && $page_id === (int) get_queried_object_id();
+
+	if (!is_404() && !$is_root_page && !$is_wp_page)
 		return;
 
 	// bp_get_root_url() only exists since BuddyPress 12.0.
@@ -658,11 +739,16 @@ function buddydrive_maybe_redirect_oldlink()
 	$buddydrive_slug = buddydrive()->buddydrive_slug;
 	$buddydrive_old_root_url = trailingslashit(trailingslashit($root_domain_url) . $buddydrive_slug);
 
-	if (strpos($maybe_buddydrive, $buddydrive_old_root_url) !== 0) {
+	if ($is_wp_page) {
+		// The page may have been renamed, so its URL is not always the old root one.
+		$buddydrive_old_root_url = trailingslashit(get_permalink($page_id));
+		$path = '';
+	} elseif (strpos($maybe_buddydrive, $buddydrive_old_root_url) !== 0) {
 		return;
+	} else {
+		$path = trim(substr($maybe_buddydrive, strlen($buddydrive_old_root_url)), '/');
 	}
 
-	$path = trim(substr($maybe_buddydrive, strlen($buddydrive_old_root_url)), '/');
 	$parts = explode('/', $path);
 	$buddydrive_new_url = '';
 
@@ -682,6 +768,10 @@ function buddydrive_maybe_redirect_oldlink()
 		if ('' !== $path) {
 			$buddydrive_new_url .= trailingslashit($path);
 		}
+
+		// BuddyPress 12+: visitors on the BuddyDrive root log in first, then come back here and reach their own BuddyDrive.
+	} elseif ('' === $path && buddydrive_bp_uses_rewrites()) {
+		$buddydrive_new_url = wp_login_url($buddydrive_old_root_url);
 	}
 
 	// Never redirect a request to itself: keep the 404.
@@ -690,6 +780,37 @@ function buddydrive_maybe_redirect_oldlink()
 	}
 
 	bp_core_redirect($buddydrive_new_url);
+}
+
+/**
+ * Checks whether BuddyPress routes its URLs with rewrite rules
+ *
+ * True on BuddyPress 12+, false on older versions and with BP Classic (legacy parser).
+ * BuddyDrive registers no rewrite rules for its root page, so with the rewrites
+ * parser BuddyPress does not serve that page.
+ *
+ * @since 2.1.8
+ *
+ * @return bool
+ */
+function buddydrive_bp_uses_rewrites()
+{
+	return function_exists('bp_core_get_query_parser') && 'rewrites' === bp_core_get_query_parser();
+}
+
+/**
+ * Gets the ID of the BuddyDrive page BuddyDrive creates on activation
+ *
+ * @since 2.1.8
+ *
+ * @return int the page ID, 0 when the site has none.
+ */
+function buddydrive_get_directory_page_id()
+{
+	$directory_pages = bp_core_get_directory_page_ids();
+	$buddydrive_slug = buddydrive()->buddydrive_slug;
+
+	return !empty($directory_pages[$buddydrive_slug]) ? (int) $directory_pages[$buddydrive_slug] : 0;
 }
 
 /**
@@ -860,25 +981,22 @@ function buddydrive_get_default_privacy($default = 'buddydrive_public')
 }
 
 /**
- * Get visible groups for the current user
+ * Get the groups whose BuddyDrive items the current user can view
  *
  * @since 2.0.0
+ * @since 2.1.8 Only the groups the current user is a member of, public groups included.
  *
  * @return array A list of visible group IDs
  */
 function buddydrive_get_visible_groups()
 {
-	global $wpdb;
-	$bp = buddypress();
-
-	// Get all public groups
-	$visible_groups = $wpdb->get_col("SELECT id FROM {$bp->groups->table_name} WHERE status = 'public'");
+	$visible_groups = array();
 
 	if (is_user_logged_in()) {
 		$current_user_groups = groups_get_user_groups(bp_loggedin_user_id());
 
 		if (!empty($current_user_groups['groups'])) {
-			$visible_groups = array_unique(array_merge($visible_groups, $current_user_groups['groups']));
+			$visible_groups = array_map('intval', $current_user_groups['groups']);
 		}
 	}
 
@@ -919,7 +1037,8 @@ function buddydrive_update_items_status($per_page = false)
 	$sql['where'] = 'WHERE ' . join(' AND ', $sql['where']);
 
 	$query = join(' ', $sql);
-	$items = $wpdb->get_results($wpdb->prepare($query));
+	// The parts of the query are already prepared.
+	$items = $wpdb->get_results($query);
 
 	$updated = 0;
 

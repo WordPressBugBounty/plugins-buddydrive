@@ -22,6 +22,20 @@ class BuddyDrive_Item
 	public $guid;
 	public $metas;
 
+	/**
+	 * The WP_Query used to get the items.
+	 *
+	 * @var WP_Query|null
+	 */
+	public $query;
+
+	/**
+	 * The pagination links of the items loop.
+	 *
+	 * @var string|array|null
+	 */
+	public $pag_links;
+
 	public function __construct($id = 0)
 	{
 		if (!empty($id)) {
@@ -314,9 +328,8 @@ class BuddyDrive_Item
 							$query_args['post_status'][] = 'buddydrive_password';
 
 							/**
-							 * Files attached to a public group can be viewed by anyone
-							 * Other group stati needs the user to be a member of it to
-							 * be able to view the file.
+							 * Files attached to a group can only be viewed by the members
+							 * of the group, whatever its status.
 							 */
 							if (bp_is_active('groups')) {
 								// Include groups..
@@ -371,7 +384,7 @@ class BuddyDrive_Item
 							if (!empty($r['group_id']) && empty($r['user_id'])) {
 								$group = groups_get_group((int) $r['group_id']);
 
-								if (empty($group->id) || ('public' !== $group->status && !groups_is_user_member(bp_loggedin_user_id(), $group->id) && !bp_current_user_can('bp_moderate'))) {
+								if (empty($group->id) || (!groups_is_user_member(bp_loggedin_user_id(), $group->id) && !bp_current_user_can('bp_moderate'))) {
 									$query_args = array();
 								} else {
 									if (!empty($query_args['author'])) {
@@ -935,7 +948,8 @@ class BuddyDrive_Item
 		$sql['where'] = 'WHERE ' . join(' AND ', $sql['where']);
 
 		$query = join(' ', $sql);
-		$stats = $wpdb->get_results($wpdb->prepare($query));
+		// The parts of the query are already prepared.
+		$stats = $wpdb->get_results($query);
 
 		/**
 		 * Filter the stats of a user.
@@ -953,10 +967,23 @@ if (class_exists('BP_Attachment')):
 	/**
 	 * The Attachments class
 	 *
+	 * BP_Attachment sets its upload parameters (and any added with the
+	 * `buddydrive_upload_upload_params` filter) as properties it does not
+	 * declare, so this class allows dynamic properties, like BuddyPress' own
+	 * BP_Attachment subclasses.
+	 *
 	 * @since 1.3.0
 	 */
+	#[\AllowDynamicProperties]
 	class BuddyDrive_Attachment extends BP_Attachment
 	{
+		/**
+		 * BuddyDrive upload dir and url, and their thumbnail versions.
+		 *
+		 * @var array
+		 */
+		public $upload_data = array();
+
 		/**
 		 * The constuctor
 		 *

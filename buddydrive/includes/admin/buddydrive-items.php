@@ -1104,7 +1104,7 @@ class BuddyDrive_List_Table extends WP_List_Table
 		echo apply_filters('buddydrive_get_item_date', $date);
 	}
 
-	function column_default($item = array(), $column_name)
+	function column_default($item, $column_name)
 	{
 		return apply_filters('buddydrive_list_table_custom_column', '', $column_name, (int) $item['ID']);
 	}

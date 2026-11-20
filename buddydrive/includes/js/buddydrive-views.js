@@ -605,9 +605,11 @@ window.buddydrive = window.buddydrive || {};
 		className: 'search',
 		id: 'buddydrive-search-input',
 
-		attributes: {
-			type: 'search',
-			placeholder: 'Search'
+		attributes: function () {
+			return {
+				type: 'search',
+				placeholder: buddydrive.Strings.searchPlaceholder || 'Search'
+			};
 		},
 
 		events: {
